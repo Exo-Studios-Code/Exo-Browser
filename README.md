@@ -1,18 +1,12 @@
 # Ex0 Browser
 <img width="1914" height="1029" alt="obrazek" src="https://github.com/user-attachments/assets/49325943-b0e5-4942-903b-b426c9d1c60e" />
-Ono to není v čistém HTML kódu, ale v takzvaném **Markdownu** (který GitHub používá pro formátování textů a tabulek).
 
-Tady máš celý ten text připravený v jednom přehledném bloku. Stačí kliknout na tlačítko **Copy** (Kopírovat) v rohu tabulky a vložit to celé rovnou do tvého editoru na GitHubu:
-
-```markdown
 # Exo-Browser 🚀
 Developed by **Ex0 Studios**
 
 Exo-Browser is a modern, minimal web browser built on top of Electron and Chromium. 
 
 > **Design Aesthetic:** *Midnight Glass* — deep blacks, iridescent accents, and absolute precision.
-
-<!-- Drop your screenshot here (Ctrl+V) to display a preview! -->
 
 ---
 

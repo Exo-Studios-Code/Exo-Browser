@@ -1,4 +1,5 @@
-# Nyx Browser
+# Ex0 Browser
+<img width="1914" height="1029" alt="obrazek" src="https://github.com/user-attachments/assets/49325943-b0e5-4942-903b-b426c9d1c60e" />
 
 > Moderní, minimalistický webový prohlížeč postavený na Electronu 29 + Chromiu.  
 > Design: *Midnight Glass* — hluboká tma, irideskentní akcenty, přesnost.
@@ -9,7 +10,7 @@
 
 ```bash
 # 1. Naklonovat / rozbalit projekt
-cd nyx-browser
+cd Exo-browser
 
 # 2. Nainstalovat závislosti (pouze Electron)
 npm install

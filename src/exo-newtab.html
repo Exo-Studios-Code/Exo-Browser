@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<meta http-equiv="Content-Security-Policy"
+content="
+default-src 'self' 'unsafe-inline';
+img-src 'self' data: https: http:;
+media-src 'self' https: http:;
+font-src https://fonts.googleapis.com https://fonts.gstatic.com;
+connect-src 'none';
+"/>
+
+<title>Exo — TAB</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<link rel="stylesheet" href="exo-search.css"/>
+
+<style>
+
+/* ════════════════════════════════════════════════════════════════════════
+   ROOT
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root{
+
+  --bg:#05060d;
+
+  --glass:
+    linear-gradient(
+      180deg,
+      rgba(14,16,30,.78),
+      rgba(8,10,20,.88)
+    );
+
+  --glass-strong:
+    linear-gradient(
+      180deg,
+      rgba(16,18,34,.88),
+      rgba(8,10,20,.94)
+    );
+
+  --glass-border:
+    rgba(255,255,255,.12);
+
+  --txt:
+    #eef6ff;
+
+  --txt-soft:
+    rgba(220,230,255,.68);
+
+  --acc-1:
+    #8b5cff;
+
+  --acc-2:
+    #00d9ff;
+
+  --acc-pink:
+    #ff2ea6;
+
+  --acc-green:
+    #5dffb3;
+
+  --ease:
+    cubic-bezier(0.16,1,0.3,1);
+
+  --shadow-main:
+    0 12px 40px rgba(0,0,0,.65);
+
+  --shadow-neon:
+    0 0 30px rgba(124,77,255,.22);
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BASE
+   ════════════════════════════════════════════════════════════════════════ */
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  width:100%;
+  min-height:100%;
+  overflow:hidden;
+}
+
+body{
+
+  margin:0;
+
+  background:var(--bg);
+
+  color:var(--txt);
+
+  font-family:'Space Grotesk',sans-serif;
+
+  position:relative;
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   VIDEO / GIF BACKGROUND
+   ════════════════════════════════════════════════════════════════════════ */
+
+#bg-wallpaper{
+
+  position:fixed;
+
+  inset:0;
+
+  z-index:-5;
+
+  overflow:hidden;
+
+  background:#000;
+
+}
+
+.bg-video-content{
+
+  position:absolute;
+
+  inset:0;
+
+  width:100%;
+
+  height:100%;
+
+  object-fit:cover;
+
+  opacity:.34;
+
+  filter:
+    brightness(.55)
+    saturate(1.2)
+    contrast(1.08);
+
+  transform:scale(1.05);
+
+  animation:bgFloat 18s ease-in-out infinite alternate;
+
+}
+
+.bg-custom-image{
+
+  position:absolute;
+
+  inset:0;
+
+  width:100%;
+
+  height:100%;
+
+  object-fit:cover;
+
+  opacity:.32;
+
+  filter:
+    brightness(.6)
+    saturate(1.1)
+    contrast(1.06);
+
+  mix-blend-mode:screen;
+
+}
+
+@keyframes bgFloat{
+
+  0%{
+    transform:
+      scale(1.05)
+      translate3d(0,0,0);
+  }
+
+  100%{
+    transform:
+      scale(1.09)
+      translate3d(-1.5%, -1%, 0);
+  }
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ATMOSPHERIC OVERLAY
+   ════════════════════════════════════════════════════════════════════════ */
+
+.bg-overlay{
+
+  position:fixed;
+
+  inset:0;
+
+  z-index:-4;
+
+  pointer-events:none;
+
+}
+
+.bg-overlay::before{
+
+  content:'';
+
+  position:absolute;
+
+  inset:0;
+
+  background:
+
+    radial-gradient(
+      circle at top left,
+      rgba(124,77,255,.24),
+      transparent 30%
+    ),
+
+    radial-gradient(
+      circle at top right,
+      rgba(0,217,255,.16),
+      transparent 32%
+    ),
+
+    radial-gradient(
+      circle at bottom center,
+      rgba(255,46,166,.12),
+      transparent 28%
+    );
+
+}
+
+.bg-overlay::after{
+
+  content:'';
+
+  position:absolute;
+
+  inset:0;
+
+  background:
+
+    linear-gradient(
+      rgba(255,255,255,.025) 1px,
+      transparent 1px
+    ),
+
+    linear-gradient(
+      90deg,
+      rgba(255,255,255,.025) 1px,
+      transparent 1px
+    );
+
+  background-size:90px 90px;
+
+  opacity:.18;
+
+  mask-image:
+    radial-gradient(
+      circle at center,
+      black 28%,
+      transparent 100%
+    );
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   NOISE
+   ════════════════════════════════════════════════════════════════════════ */
+
+.bg-noise{
+
+  position:fixed;
+
+  inset:0;
+
+  z-index:-3;
+
+  pointer-events:none;
+
+  opacity:.03;
+
+  background-image:
+
+    radial-gradient(circle, white 1px, transparent 1px);
+
+  background-size:4px 4px;
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PARTICLES
+   ════════════════════════════════════════════════════════════════════════ */
+
+#hero-particles{
+
+  position:fixed;
+
+  inset:0;
+
+  z-index:0;
+
+  pointer-events:none;
+
+}
+
+.hero-particle{
+
+  position:absolute;
+
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,.95),
+      rgba(0,217,255,.18),
+      transparent 75%
+    );
+
+  box-shadow:
+
+    0 0 14px rgba(0,217,255,.55),
+    0 0 24px rgba(124,77,255,.25);
+
+  animation:floatParticle linear infinite;
+
+}
+
+@keyframes floatParticle{
+
+  0%{
+
+    transform:
+      translateY(0px)
+      scale(1);
+
+    opacity:.15;
+
+  }
+
+  50%{
+
+    opacity:.75;
+
+  }
+
+  100%{
+
+    transform:
+      translateY(-120px)
+      scale(1.4);
+
+    opacity:0;
+
+  }
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   STAGE
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-stage{
+
+  position:relative;
+
+  z-index:5;
+
+  min-height:100vh;
+
+  display:flex;
+
+  flex-direction:column;
+
+  justify-content:center;
+
+  align-items:center;
+
+  padding:40px 24px 90px;
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CLOCK WRAP
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-clock-wrap{
+
+  position:relative;
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:center;
+
+  gap:12px;
+
+  margin-bottom:34px;
+
+  padding:
+    28px
+    42px;
+
+  border-radius:30px;
+
+  background:var(--glass);
+
+  border:1px solid var(--glass-border);
+
+  backdrop-filter:
+    blur(28px)
+    saturate(1.3);
+
+  -webkit-backdrop-filter:
+    blur(28px)
+    saturate(1.3);
+
+  box-shadow:
+
+    inset 0 1px 0 rgba(255,255,255,.06),
+
+    inset 0 0 30px rgba(255,255,255,.03),
+
+    var(--shadow-main),
+
+    var(--shadow-neon);
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CLOCK
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-clock{
+
+  position:relative;
+
+  font-family:'JetBrains Mono',monospace;
+
+  font-size:clamp(82px,11vw,138px);
+
+  font-weight:700;
+
+  letter-spacing:-.08em;
+
+  line-height:1;
+
+  user-select:none;
+
+  background:
+
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #9cecff 30%,
+      #cab4ff 65%,
+      #ffffff 100%
+    );
+
+  -webkit-background-clip:text;
+
+  background-clip:text;
+
+  -webkit-text-fill-color:transparent;
+
+  filter:
+
+    drop-shadow(0 0 22px rgba(124,77,255,.42))
+
+    drop-shadow(0 0 60px rgba(0,217,255,.18));
+
+}
+
+#nt-clock::before,
+#nt-clock::after{
+
+  content:attr(data-time);
+
+  position:absolute;
+
+  inset:0;
+
+  pointer-events:none;
+
+  mix-blend-mode:screen;
+
+}
+
+#nt-clock::before{
+
+  color:#ff2ea6;
+
+  opacity:.26;
+
+  transform:translate(-2px,0);
+
+}
+
+#nt-clock::after{
+
+  color:#00d9ff;
+
+  opacity:.3;
+
+  transform:translate(2px,0);
+
+}
+
+#nt-date{
+
+  font-family:'JetBrains Mono',monospace;
+
+  font-size:12px;
+
+  letter-spacing:.32em;
+
+  text-transform:uppercase;
+
+  color:rgba(220,230,255,.58);
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   GREETING
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-greeting{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:16px;
+
+  margin-bottom:38px;
+
+  font-family:'JetBrains Mono',monospace;
+
+  font-size:11px;
+
+  letter-spacing:.34em;
+
+  text-transform:uppercase;
+
+  color:rgba(180,210,255,.62);
+
+}
+
+.gr-line{
+
+  width:56px;
+
+  height:1px;
+
+  background:
+
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(0,217,255,.6)
+    );
+
+}
+
+.gr-line.r{
+
+  background:
+
+    linear-gradient(
+      90deg,
+      rgba(255,46,166,.6),
+      transparent
+    );
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SEARCH SECTION
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-search-section{
+
+  width:100%;
+
+  max-width:860px;
+
+}
+
+#exo-hero-wrap{
+
+  position:relative;
+
+  display:flex;
+
+  align-items:center;
+
+  gap:16px;
+
+  width:100%;
+
+  min-height:92px;
+
+  padding:
+    0
+    18px;
+
+  border-radius:32px;
+
+  background:var(--glass-strong);
+
+  border:1px solid rgba(255,255,255,.12);
+
+  backdrop-filter:
+    blur(34px)
+    saturate(1.4);
+
+  -webkit-backdrop-filter:
+    blur(34px)
+    saturate(1.4);
+
+  box-shadow:
+
+    inset 0 1px 0 rgba(255,255,255,.08),
+
+    inset 0 0 40px rgba(255,255,255,.03),
+
+    0 0 0 1px rgba(255,255,255,.03),
+
+    0 18px 60px rgba(0,0,0,.72),
+
+    0 0 70px rgba(124,77,255,.14);
+
+}
+
+#exo-hero-wrap::before{
+
+  content:'';
+
+  position:absolute;
+
+  inset:0;
+
+  border-radius:inherit;
+
+  background:
+
+    linear-gradient(
+      135deg,
+      rgba(124,77,255,.14),
+      transparent 32%,
+      transparent 70%,
+      rgba(0,217,255,.1)
+    );
+
+  pointer-events:none;
+
+}
+
+.hero-search-glow{
+
+  position:absolute;
+
+  inset:-2px;
+
+  border-radius:inherit;
+
+  background:
+
+    linear-gradient(
+      90deg,
+      rgba(124,77,255,.18),
+      rgba(0,217,255,.12),
+      rgba(255,46,166,.16)
+    );
+
+  filter:blur(26px);
+
+  opacity:.75;
+
+  z-index:-1;
+
+}
+
+.hero-search-icon{
+
+  width:22px;
+
+  height:22px;
+
+  color:rgba(240,245,255,.82);
+
+  flex-shrink:0;
+
+}
+
+#exo-hero-input{
+
+  flex:1;
+
+  background:transparent;
+
+  border:none;
+
+  outline:none;
+
+  color:#f4f8ff;
+
+  font-family:'JetBrains Mono',monospace;
+
+  font-size:17px;
+
+  font-weight:500;
+
+  letter-spacing:.02em;
+
+}
+
+#exo-hero-input::placeholder{
+
+  color:rgba(240,245,255,.74);
+
+  text-transform:uppercase;
+
+  letter-spacing:.12em;
+
+}
+
+#exo-hero-btn{
+
+  position:relative;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:10px;
+
+  min-width:158px;
+
+  height:58px;
+
+  padding:0 22px;
+
+  border:none;
+
+  border-radius:18px;
+
+  overflow:hidden;
+
+  cursor:pointer;
+
+  color:white;
+
+  background:
+
+    linear-gradient(
+      135deg,
+      var(--acc-1),
+      var(--acc-pink)
+    );
+
+  font-family:'Space Grotesk',sans-serif;
+
+  font-size:15px;
+
+  font-weight:700;
+
+  letter-spacing:.05em;
+
+  transition:
+
+    transform .35s var(--ease),
+
+    box-shadow .35s var(--ease),
+
+    filter .35s var(--ease);
+
+  box-shadow:
+
+    0 0 24px rgba(124,77,255,.55),
+
+    0 0 50px rgba(255,46,166,.3),
+
+    0 12px 30px rgba(0,0,0,.42);
+
+}
+
+#exo-hero-btn::before{
+
+  content:'';
+
+  position:absolute;
+
+  inset:0;
+
+  background:
+
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,.24),
+      transparent 40%
+    );
+
+}
+
+#exo-hero-btn svg{
+
+  width:18px;
+
+  height:18px;
+
+}
+
+#exo-hero-btn:hover{
+
+  transform:
+    translateY(-2px)
+    scale(1.04);
+
+  filter:brightness(1.08);
+
+}
+
+#exo-hero-btn.pulse{
+
+  animation:heroPulse 2.2s ease-in-out infinite;
+
+}
+
+@keyframes heroPulse{
+
+  0%{
+
+    box-shadow:
+
+      0 0 24px rgba(124,77,255,.45),
+
+      0 0 50px rgba(255,46,166,.18),
+
+      0 12px 30px rgba(0,0,0,.4);
+
+  }
+
+  50%{
+
+    box-shadow:
+
+      0 0 34px rgba(124,77,255,.82),
+
+      0 0 70px rgba(255,46,166,.5),
+
+      0 0 110px rgba(0,217,255,.16),
+
+      0 12px 30px rgba(0,0,0,.42);
+
+  }
+
+  100%{
+
+    box-shadow:
+
+      0 0 24px rgba(124,77,255,.45),
+
+      0 0 50px rgba(255,46,166,.18),
+
+      0 12px 30px rgba(0,0,0,.4);
+
+  }
+
+}
+
+.hero-hints{
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:center;
+
+  gap:14px;
+
+  margin-top:16px;
+
+  font-family:'JetBrains Mono',monospace;
+
+  font-size:11px;
+
+  letter-spacing:.08em;
+
+  color:rgba(220,230,255,.52);
+
+}
+
+.hero-hints kbd{
+
+  padding:
+    3px
+    8px;
+
+  border-radius:8px;
+
+  background:rgba(255,255,255,.05);
+
+  border:1px solid rgba(255,255,255,.08);
+
+  font-family:inherit;
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SPEED DIAL
+   ════════════════════════════════════════════════════════════════════════ */
+
+#nt-speeddial{
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  justify-content:center;
+
+  gap:18px;
+
+  width:100%;
+
+  max-width:860px;
+
+  margin-top:48px;
+
+}
+
+.sd-item{
+
+  position:relative;
+
+  width:132px;
+
+  height:128px;
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:14px;
+
+  border-radius:26px;
+
+  text-decoration:none;
+
+  color:white;
+
+  overflow:hidden;
+
+  background:var(--glass);
+
+  border:1px solid rgba(255,255,255,.1);
+
+  backdrop-filter:
+    blur(28px)
+    saturate(1.3);
+
+  -webkit-backdrop-filter:
+    blur(28px)
+    saturate(1.3);
+
+  box-shadow:
+
+    inset 0 1px 0 rgba(255,255,255,.06),
+
+    inset 0 0 30px rgba(255,255,255,.02),
+
+    0 16px 40px rgba(0,0,0,.6);
+
+  transition:
+
+    transform .55s cubic-bezier(0.16,1,0.3,1),
+
+    border-color .35s ease,
+
+    box-shadow .55s cubic-bezier(0.16,1,0.3,1);
+
+}
+
+.sd-item::after{
+
+  content:'';
+
+  position:absolute;
+
+  inset:-12px;
+
+  background:var(--hoverGlow);
+
+  opacity:0;
+
+  filter:blur(32px);
+
+  transition:opacity .55s var(--ease);
+
+}
+
+.sd-item:hover{
+
+  transform:
+
+    perspective(900px)
+
+    rotateX(7deg)
+
+    rotateY(-7deg)
+
+    translateY(-8px)
+
+    scale(1.04);
+
+  border-color:var(--hoverBorder);
+
+  box-shadow:
+
+    inset 0 1px 0 rgba(255,255,255,.12),
+
+    inset 0 0 40px rgba(255,255,255,.04),
+
+    0 24px 60px rgba(0,0,0,.7),
+
+    0 0 40px var(--hoverBorder);
+
+}
+
+.sd-item:hover::after{
+
+  opacity:1;
+
+}
+
+.sd-item[data-site="youtube"]{
+
+  --hoverBorder:rgba(255,0,0,.7);
+
+  --hoverGlow:
+    radial-gradient(
+      circle,
+      rgba(255,0,0,.36),
+      transparent 72%
+    );
+
+  --brand:#ff0000;
+
+}
+
+.sd-item[data-site="twitch"]{
+
+  --hoverBorder:rgba(145,70,255,.7);
+
+  --hoverGlow:
+    radial-gradient(
+      circle,
+      rgba(145,70,255,.36),
+      transparent 72%
+    );
+
+  --brand:#9146ff;
+
+}
+
+.sd-item[data-site="discord"]{
+
+  --hoverBorder:rgba(88,101,242,.7);
+
+  --hoverGlow:
+    radial-gradient(
+      circle,
+      rgba(88,101,242,.36),
+      transparent 72%
+    );
+
+  --brand:#5865f2;
+
+}
+
+.sd-item[data-site="github"]{
+
+  --hoverBorder:rgba(255,255,255,.55);
+
+  --hoverGlow:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,.22),
+      transparent 72%
+    );
+
+  --brand:#ffffff;
+
+}
+
+.sd-item[data-site="reddit"]{
+
+  --hoverBorder:rgba(255,87,0,.7);
+
+  --hoverGlow:
+    radial-gradient(
+      circle,
+      rgba(255,87,0,.36),
+      transparent 72%
+    );
+
+  --brand:#ff5700;
+
+}
+
+.sd-icon{
+
+  position:relative;
+
+  z-index:2;
+
+  width:56px;
+
+  height:56px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  border-radius:18px;
+
+  background:rgba(255,255,255,.05);
+
+  border:1px solid rgba(255,255,255,.08);
+
+  transition:
+
+    transform .55s var(--ease),
+
+    background .35s ease,
+
+    box-shadow .35s ease;
+
+}
+
+.sd-icon svg{
+
+  width:30px;
+
+  height:30px;
+
+  fill:rgba(255,255,255,.9);
+
+  transition:
+
+    fill .35s ease,
+
+    filter .35s ease,
+
+    transform .35s ease;
+
+}
+
+.sd-item:hover .sd-icon{
+
+  transform:scale(1.1);
+
+  background:rgba(255,255,255,.08);
+
+  box-shadow:
+
+    inset 0 1px 0 rgba(255,255,255,.12),
+
+    0 0 28px rgba(255,255,255,.08);
+
+}
+
+.sd-item:hover .sd-icon svg{
+
+  fill:var(--brand);
+
+  filter:
+
+    drop-shadow(0 0 12px var(--brand))
+
+    drop-shadow(0 0 30px var(--brand));
+
+}
+
+.sd-label{
+
+  position:relative;
+
+  z-index:2;
+
+  font-size:12px;
+
+  font-weight:600;
+
+  letter-spacing:.12em;
+
+  text-transform:uppercase;
+
+  color:rgba(235,240,255,.85);
+
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width:768px){
+
+  #nt-clock-wrap{
+
+    width:100%;
+
+    padding:
+      24px
+      18px;
+
+  }
+
+  #exo-hero-wrap{
+
+    min-height:82px;
+
+  }
+
+  #exo-hero-btn{
+
+    min-width:122px;
+
+    height:52px;
+
+    font-size:14px;
+
+  }
+
+  .sd-item{
+
+    width:112px;
+
+    height:116px;
+
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     WALLPAPER
+     ════════════════════════════════════════════════════════════════════════ -->
+
+<div id="bg-wallpaper">
+
+  <img 
+    class="bg-custom-image" 
+    src="background.png" 
+    alt="Exo Wallpaper"
+    style="display: block; opacity: 0.4; width: 100%; height: 100%; object-fit: cover;" 
+  />
+
+</div>
+
+<div class="bg-overlay"></div>
+<div class="bg-noise"></div>
+<div id="hero-particles"></div>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     MAIN STAGE
+     ════════════════════════════════════════════════════════════════════════ -->
+
+<div id="nt-stage">
+
+  <!-- CLOCK -->
+
+  <div id="nt-clock-wrap">
+
+    <div
+      id="nt-clock"
+      data-time="00:00">
+      00:00
+    </div>
+
+    <div id="nt-date"></div>
+
+  </div>
+
+  <!-- GREETING -->
+
+  <div id="nt-greeting">
+
+    <span class="gr-line"></span>
+
+    <span id="nt-greeting-text">
+      EXO CYBER DECK // READY
+    </span>
+
+    <span class="gr-line r"></span>
+
+  </div>
+
+  <!-- SEARCH -->
+
+  <div id="nt-search-section">
+
+    <form id="exo-hero-form">
+
+      <div id="exo-hero-wrap">
+
+        <div class="hero-search-glow"></div>
+
+        <svg class="hero-search-icon" viewBox="0 0 16 16" fill="none">
+
+          <circle
+            cx="6.5"
+            cy="6.5"
+            r="4.5"
+            stroke="currentColor"
+            stroke-width="1.5"/>
+
+          <path
+            d="M10.5 10.5l3.5 3.5"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"/>
+
+        </svg>
+
+        <input
+          type="text"
+          id="exo-hero-input"
+          placeholder="SEARCH WITH EXO SEARCH..."
+          autocomplete="off"
+          spellcheck="false"
+          autocorrect="off"/>
+
+        <button
+          type="submit"
+          id="exo-hero-btn"
+          class="pulse">
+
+          <svg viewBox="0 0 14 14" fill="none">
+
+            <path
+              d="M2 7h10M8 3l4 4-4 4"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"/>
+
+          </svg>
+
+          <span>Hledat</span>
+
+        </button>
+
+      </div>
+
+      <div class="hero-hints">
+
+        <span><kbd>/</kbd> INSTANT FOCUS</span>
+
+        <span>·</span>
+
+        <span>PRIVACY MODE ACTIVE</span>
+
+      </div>
+
+    </form>
+
+  </div>
+
+  <!-- SPEED DIAL -->
+
+  <nav id="nt-speeddial">
+
+    <!-- YOUTUBE -->
+
+    <a class="sd-item" data-site="youtube" href="https://www.youtube.com">
+
+      <div class="sd-icon">
+
+        <svg viewBox="0 0 24 24">
+
+          <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.4 3.5 12 3.5 12 3.5s-7.4 0-9.4.6A3 3 0 0 0 .5 6.2 31.8 31.8 0 0 0 0 12a31.8 31.8 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c2 .6 9.4.6 9.4.6s7.4 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.8 31.8 0 0 0 24 12a31.8 31.8 0 0 0-.5-5.8z"/>
+
+          <path d="M9.7 15.5V8.5L15.8 12z" fill="#05060d"/>
+
+        </svg>
+
+      </div>
+
+      <span class="sd-label">YouTube</span>
+
+    </a>
+
+    <!-- TWITCH -->
+
+    <a class="sd-item" data-site="twitch" href="https://www.twitch.tv">
+
+      <div class="sd-icon">
+
+        <svg viewBox="0 0 24 24">
+
+          <path d="M4 2 2 6v14h5v4l4-4h4l7-7V2H4zm16 10-4 4h-4l-3 3v-3H4V4h16v8z"/>
+
+          <path d="M10 7h2v5h-2zm5 0h2v5h-2z" fill="#05060d"/>
+
+        </svg>
+
+      </div>
+
+      <span class="sd-label">Twitch</span>
+
+    </a>
+
+    <!-- DISCORD -->
+
+    <a class="sd-item" data-site="discord" href="https://discord.com/app">
+
+      <div class="sd-icon">
+
+        <svg viewBox="0 0 24 24">
+
+          <path d="M20.3 4.4A16.8 16.8 0 0 0 16.2 3l-.2.4a15.4 15.4 0 0 1 3.7 1.8 13.6 13.6 0 0 0-4.1-1.3 13.8 13.8 0 0 0-7.2 0A13.6 13.6 0 0 0 4.3 5.2 15.4 15.4 0 0 1 8 3.4L7.8 3a16.8 16.8 0 0 0-4.1 1.4C1.1 8.2.5 11.8.7 15.4A16.9 16.9 0 0 0 5.8 18l1.1-1.5a10.8 10.8 0 0 1-1.8-.9l.4-.3c3.5 1.6 7.3 1.6 10.8 0l.4.3a10.8 10.8 0 0 1-1.8.9l1.1 1.5a16.9 16.9 0 0 0 5.1-2.6c.3-4.2-.5-7.8-2.8-11z"/>
+
+          <circle cx="9" cy="12" r="1.3" fill="#05060d"/>
+
+          <circle cx="15" cy="12" r="1.3" fill="#05060d"/>
+
+        </svg>
+
+      </div>
+
+      <span class="sd-label">Discord</span>
+
+    </a>
+
+    <!-- GITHUB -->
+
+    <a class="sd-item" data-site="github" href="https://github.com">
+
+      <div class="sd-icon">
+
+        <svg viewBox="0 0 24 24">
+
+          <path d="M12 .5A12 12 0 0 0 8.2 23.4c.6.1.8-.2.8-.6v-2c-3.4.8-4.1-1.4-4.1-1.4-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.9-.7 2.3-1.1.1-.7.4-1.2.7-1.5-2.7-.3-5.5-1.4-5.5-6a4.7 4.7 0 0 1 1.2-3.2 4.3 4.3 0 0 1 .1-3.1s1-.3 3.3 1.2a11.2 11.2 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2a4.3 4.3 0 0 1 .1 3.1 4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .4.3.8 1 .8 2v3c0 .4.2.7.8.6A12 12 0 0 0 12 .5z"/>
+
+        </svg>
+
+      </div>
+
+      <span class="sd-label">GitHub</span>
+
+    </a>
+
+    <!-- REDDIT -->
+
+    <a class="sd-item" data-site="reddit" href="https://www.reddit.com">
+
+      <div class="sd-icon">
+
+        <svg viewBox="0 0 24 24">
+
+          <path d="M14.5 15.3a3.4 3.4 0 0 1-5 0 .7.7 0 1 0-1 1 4.8 4.8 0 0 0 7 0 .7.7 0 0 0-1-1z"/>
+
+          <circle cx="9.3" cy="11.3" r="1.1"/>
+
+          <circle cx="14.7" cy="11.3" r="1.1"/>
+
+          <path d="M21.4 11.1a2 2 0 0 0-3.4-1.4 8.2 8.2 0 0 0-5.6-1.9l1-4.4 3.1.7a1.7 1.7 0 1 0 .3-1.1l-3.7-.8a.7.7 0 0 0-.8.5l-1.2 5.1a8.4 8.4 0 0 0-5.2 2 2 2 0 1 0-1.1 3.7v.2c0 3.1 3.6 5.6 8 5.6s8-2.5 8-5.6v-.2a2 2 0 0 0 1.6-2z"/>
+
+        </svg>
+
+      </div>
+
+      <span class="sd-label">Reddit</span>
+
+    </a>
+
+  </nav>
+
+</div>
+
+<script>
+
+'use strict';
+
+/* ════════════════════════════════════════════════════════════════════════
+   CLOCK
+   ════════════════════════════════════════════════════════════════════════ */
+
+const clockEl = document.getElementById('nt-clock');
+
+const dateEl  = document.getElementById('nt-date');
+
+const DAYS = [
+
+  'Neděle',
+  'Pondělí',
+  'Úterý',
+  'Středa',
+  'Čtvrtek',
+  'Pátek',
+  'Sobota'
+
+];
+
+const MONTHS = [
+
+  'ledna',
+  'února',
+  'března',
+  'dubna',
+  'května',
+  'června',
+  'července',
+  'srpna',
+  'září',
+  'října',
+  'listopadu',
+  'prosince'
+
+];
+
+function tickClock(){
+
+  const now = new Date();
+
+  const hh =
+    String(now.getHours()).padStart(2,'0');
+
+  const mm =
+    String(now.getMinutes()).padStart(2,'0');
+
+  const time = `${hh}:${mm}`;
+
+  clockEl.textContent = time;
+
+  clockEl.dataset.time = time;
+
+  dateEl.textContent =
+
+    `${DAYS[now.getDay()]} · ${now.getDate()}. ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+
+}
+
+tickClock();
+
+const nowSync = new Date();
+
+setTimeout(() => {
+
+  tickClock();
+
+  setInterval(tickClock, 60000);
+
+}, (60 - nowSync.getSeconds()) * 1000 - nowSync.getMilliseconds());
+
+/* ════════════════════════════════════════════════════════════════════════
+   GREETING
+   ════════════════════════════════════════════════════════════════════════ */
+
+const greetings = [
+
+  'EXO CYBER DECK // READY',
+  'SYSTEM ONLINE // CONNECTED',
+  'PRIVACY MODE // ENABLED',
+  'NEURAL CORE // ACTIVE',
+  'EXO SEARCH // STANDBY',
+  'MATRIX NODE // SYNCHRONIZED'
+
+];
+
+document.getElementById('nt-greeting-text').textContent =
+
+  greetings[
+    Math.floor(Math.random() * greetings.length)
+  ];
+
+/* ════════════════════════════════════════════════════════════════════════
+   PLACEHOLDER ENGINE SYNC
+   ════════════════════════════════════════════════════════════════════════ */
+
+const input =
+  document.getElementById('exo-hero-input');
+
+const heroBtn =
+  document.getElementById('exo-hero-btn');
+
+const placeholders = {
+
+  exo:
+    'SEARCH WITH EXO SEARCH...',
+
+  ddg:
+    'SEARCH WITH DUCKDUCKGO...',
+
+  brave:
+    'SEARCH WITH BRAVE...',
+
+  google:
+    'SEARCH WITH GOOGLE...',
+
+  bing:
+    'SEARCH WITH BING...'
+
+};
+
+function updatePlaceholder(){
+
+  let engine = 'ddg';
+
+  try{
+
+    engine =
+      localStorage.getItem('exo-engine') || 'ddg';
+
+  }catch(err){}
+
+  input.placeholder =
+    placeholders[engine] || 'SEARCH THE WEB...';
+
+}
+
+updatePlaceholder();
+
+setInterval(updatePlaceholder, 250);
+
+/* ════════════════════════════════════════════════════════════════════════
+   HERO BUTTON PULSE
+   ════════════════════════════════════════════════════════════════════════ */
+
+function updateHeroPulse(){
+
+  if(input.value.trim() === ''){
+
+    heroBtn.classList.add('pulse');
+
+  }else{
+
+    heroBtn.classList.remove('pulse');
+
+  }
+
+}
+
+updateHeroPulse();
+
+input.addEventListener('input', updateHeroPulse);
+
+/* ════════════════════════════════════════════════════════════════════════
+   SEARCH
+   ════════════════════════════════════════════════════════════════════════ */
+
+const ENGINES = {
+
+  exo: q =>
+
+    location.href
+
+      .replace(
+        'exo-newtab.html',
+        'exo-search.html'
+      )
+
+      .split('#')[0]
+
+      + '#'
+
+      + encodeURIComponent(q),
+
+  ddg: q =>
+
+    'https://duckduckgo.com/?q='
+    + encodeURIComponent(q),
+
+  brave: q =>
+
+    'https://search.brave.com/search?q='
+    + encodeURIComponent(q),
+
+  google: q =>
+
+    'https://www.google.com/search?q='
+    + encodeURIComponent(q),
+
+  bing: q =>
+
+    'https://www.bing.com/search?q='
+    + encodeURIComponent(q)
+
+};
+
+document
+  .getElementById('exo-hero-form')
+
+  .addEventListener('submit', e => {
+
+    e.preventDefault();
+
+    const raw =
+      input.value.trim();
+
+    if(!raw) return;
+
+    if(/^https?:\/\//i.test(raw)){
+
+      window.location.href = raw;
+
+      return;
+
+    }
+
+    if(
+      /^[^\s]+\.[^\s]+$/.test(raw)
+      &&
+      !/\s/.test(raw)
+    ){
+
+      window.location.href =
+        'https://' + raw;
+
+      return;
+
+    }
+
+    let engine = 'ddg';
+
+    try{
+
+      engine =
+        localStorage.getItem('exo-engine') || 'ddg';
+
+    }catch(err){}
+
+    const url =
+      (ENGINES[engine] || ENGINES.ddg)(raw);
+
+    window.location.href = url;
+
+  });
+
+/* ════════════════════════════════════════════════════════════════════════
+   SLASH FOCUS
+   ════════════════════════════════════════════════════════════════════════ */
+
+document.addEventListener('keydown', e => {
+
+  if(
+    e.key === '/'
+    &&
+    document.activeElement !== input
+  ){
+
+    e.preventDefault();
+
+    input.focus();
+
+    input.select();
+
+  }
+
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   PARTICLES
+   ════════════════════════════════════════════════════════════════════════ */
+
+(() => {
+
+  const container =
+    document.getElementById('hero-particles');
+
+  for(let i = 0; i < 90; i++){
+
+    const p =
+      document.createElement('span');
+
+    p.className = 'hero-particle';
+
+    const size =
+      2 + Math.random() * 5;
+
+    p.style.left =
+      Math.random() * 100 + '%';
+
+    p.style.top =
+      Math.random() * 100 + '%';
+
+    p.style.width =
+      size + 'px';
+
+    p.style.height =
+      size + 'px';
+
+    p.style.animationDuration =
+      6 + Math.random() * 10 + 's';
+
+    p.style.animationDelay =
+      -(Math.random() * 10) + 's';
+
+    container.appendChild(p);
+
+  }
+
+})();
+
+</script>
+
+</body>
+</html>

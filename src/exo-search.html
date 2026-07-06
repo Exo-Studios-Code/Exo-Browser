@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src 'none';"/>
+  <title>Exo Search</title>
+  <link rel="stylesheet" href="exo-search.css"/>
+</head>
+<body>
+
+<!-- ── Animated Background Layers ──────────────────────────────────────────── -->
+<div class="bg-aurora" aria-hidden="true">
+  <div class="aurora-blob blob-1"></div>
+  <div class="aurora-blob blob-2"></div>
+  <div class="aurora-blob blob-3"></div>
+  <div class="aurora-blob blob-4"></div>
+  <div class="aurora-blob blob-5"></div>
+</div>
+<div class="bg-grid"         aria-hidden="true"></div>
+<div class="bg-scanlines"    aria-hidden="true"></div>
+<div class="bg-noise"        aria-hidden="true"></div>
+<div class="bg-corner-accent" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     HERO SECTION — centered Google-style, shown before first search
+     ══════════════════════════════════════════════════════════════════════════ -->
+<section id="exo-hero" aria-label="Vyhledávač Exo">
+
+  <!-- Radar rings emanating from center -->
+  <div class="hero-rings" aria-hidden="true">
+    <div class="hr hr1"></div>
+    <div class="hr hr2"></div>
+    <div class="hr hr3"></div>
+    <div class="hr hr4"></div>
+  </div>
+
+  <!-- Floating particles — injected by JS -->
+  <div id="hero-particles" aria-hidden="true"></div>
+
+  <!-- Content -->
+  <div class="hero-inner">
+
+    <!-- Logo block -->
+    <div class="hero-logo">
+      <div class="hero-icon" aria-hidden="true">
+        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="72" height="72">
+          <circle cx="28" cy="28" r="24" stroke="url(#hlg1)" stroke-width="1.5"/>
+          <circle cx="28" cy="28" r="14" stroke="url(#hlg2)" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="28" cy="28" r="6"  fill="url(#hlg1)" opacity="0.9"/>
+          <path d="M28 4v8M28 44v8M4 28h8M44 28h8"
+            stroke="url(#hlg1)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+          <path d="M11.5 11.5l5.6 5.6M38.9 38.9l5.6 5.6M44.5 11.5l-5.6 5.6M17.1 38.9l-5.6 5.6"
+            stroke="url(#hlg2)" stroke-width="1" stroke-linecap="round" opacity="0.35"/>
+          <defs>
+            <linearGradient id="hlg1" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#b899ff"/>
+              <stop offset="1" stop-color="#00d4ff"/>
+            </linearGradient>
+            <linearGradient id="hlg2" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#ff5fa8"/>
+              <stop offset="1" stop-color="#b899ff"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="hero-title-wrap">
+        <h1 class="hero-title">
+          <span class="ht-exo">EXO</span><span class="ht-search">SEARCH</span>
+        </h1>
+        <p class="hero-tagline">Soukromé · Rychlé · Bez sledování</p>
+      </div>
+    </div>
+
+    <!-- Search form -->
+    <form id="exo-hero-form" role="search" aria-label="Hlavní vyhledávací formulář">
+      <div id="exo-hero-wrap">
+        <div class="hero-search-glow" aria-hidden="true"></div>
+        <svg class="hero-search-icon" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10.5 10.5l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="exo-hero-input"
+          placeholder="Hledat na internetu…"
+          autocomplete="off" spellcheck="false" autocorrect="off"
+          aria-label="Vyhledávací dotaz"/>
+        <button type="submit" id="exo-hero-btn" aria-label="Hledat">
+          <svg viewBox="0 0 14 14" fill="none">
+            <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Hledat</span>
+        </button>
+      </div>
+
+      <div class="hero-hints">
+        <span class="hero-hint-item">
+          <kbd>/</kbd>kdykoli pro fokus
+        </span>
+        <span class="hero-hint-sep">·</span>
+        <span class="hero-hint-item">
+          <svg viewBox="0 0 12 12" fill="none" width="10" style="flex-shrink:0">
+            <path d="M6 1L1.5 3.2V6c0 2.5 2 4.7 4.5 5.3C8.5 10.7 10.5 8.5 10.5 6V3.2L6 1z"
+              stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+            <path d="M3.8 6l1.5 1.5 2.9-3" stroke="currentColor" stroke-width="1.1"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          DDG · bez sledování
+        </span>
+      </div>
+    </form>
+
+  </div><!-- /hero-inner -->
+</section>
+
+<!-- ── Header (compact — shown after first search) ──────────────────────────── -->
+<header id="exo-header">
+  <div id="exo-logo" aria-label="Exo Search">
+    <div class="logo-icon" aria-hidden="true">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="14" r="12" stroke="url(#lg1)" stroke-width="1.5"/>
+        <circle cx="14" cy="14" r="7"  stroke="url(#lg2)" stroke-width="1.2" opacity="0.7"/>
+        <circle cx="14" cy="14" r="3"  fill="url(#lg1)"   opacity="0.9"/>
+        <path d="M14 2v4M14 22v4M2 14h4M22 14h4"
+          stroke="url(#lg1)" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#b899ff"/>
+            <stop offset="1" stop-color="#00d4ff"/>
+          </linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#ff5fa8"/>
+            <stop offset="1" stop-color="#b899ff"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span class="logo-exo">EXO</span><span class="logo-s">SEARCH</span>
+  </div>
+
+  <form id="exo-search-form" role="search" aria-label="Hledat znovu">
+    <div id="exo-search-wrap">
+      <div class="search-glow-border" aria-hidden="true"></div>
+      <svg class="search-icon" viewBox="0 0 16 16" fill="none">
+        <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="exo-input" placeholder="Hledat…"
+        autocomplete="off" spellcheck="false" autocorrect="off" aria-label="Vyhledávací dotaz"/>
+      <button type="submit" id="exo-submit-btn" aria-label="Hledat">
+        <svg viewBox="0 0 14 14" fill="none">
+          <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </form>
+
+  <div id="exo-meta">
+    <div id="exo-source-badge">
+      <svg viewBox="0 0 12 12" fill="none" width="10">
+        <path d="M6 1L1.5 3.2V6c0 2.5 2 4.7 4.5 5.3C8.5 10.7 10.5 8.5 10.5 6V3.2L6 1z"
+          stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+        <path d="M3.8 6l1.5 1.5 2.9-3" stroke="currentColor" stroke-width="1.1"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>DDG · bez sledování</span>
+    </div>
+    <div id="exo-stats" aria-live="polite"></div>
+  </div>
+</header>
+
+<!-- ── Main Content ──────────────────────────────────────────────────────────── -->
+<main id="exo-main">
+
+  <!-- Loading State -->
+  <div id="exo-loading">
+    <div class="loader-wrap">
+      <div class="loader-rings">
+        <div class="lr lr1"></div>
+        <div class="lr lr2"></div>
+        <div class="lr lr3"></div>
+        <div class="lr-core"></div>
+      </div>
+      <p class="loader-label">Prohledávám<span class="loader-dots"></span></p>
+    </div>
+
+    <div class="skel-list">
+      <div class="skel-card"><div class="skel-url"></div><div class="skel-title"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+      <div class="skel-card"><div class="skel-url"></div><div class="skel-title wide"></div><div class="skel-line"></div><div class="skel-line med"></div></div>
+      <div class="skel-card"><div class="skel-url"></div><div class="skel-title"></div><div class="skel-line"></div></div>
+      <div class="skel-card"><div class="skel-url"></div><div class="skel-title wide"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+      <div class="skel-card"><div class="skel-url"></div><div class="skel-title"></div><div class="skel-line"></div><div class="skel-line med"></div></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <ol id="exo-results" class="hidden" aria-label="Výsledky hledání"></ol>
+
+  <!-- Empty / Error -->
+  <div id="exo-empty" class="hidden" role="alert">
+    <div class="empty-icon">
+      <div class="empty-ring er1"></div>
+      <div class="empty-ring er2"></div>
+      <svg viewBox="0 0 32 32" fill="none" class="empty-cross">
+        <path d="M10 10l12 12M22 10L10 22" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p id="exo-empty-msg">Žádné výsledky.</p>
+    <p class="empty-hint">Zkus jiný dotaz nebo uprav hledaný výraz.</p>
+  </div>
+
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────────── -->
+<footer id="exo-footer">
+  <div class="footer-inner">
+    <span class="footer-brand">
+      <span class="footer-exo">EXO</span> Browser
+    </span>
+    <span class="footer-sep">·</span>
+    <span>Výsledky přes DuckDuckGo</span>
+    <span class="footer-sep">·</span>
+    <span>Žádné sledování</span>
+  </div>
+</footer>
+
+<!-- ─────────────────────────────────────────────────────────────────────────── -->
+<script>
+'use strict';
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   State & DOM refs
+   ────────────────────────────────────────────────────────────────────────────── */
+let currentQuery = '';
+try { currentQuery = decodeURIComponent(location.hash.slice(1)); } catch (_) {}
+
+const heroSection = document.getElementById('exo-hero');
+const heroInput   = document.getElementById('exo-hero-input');
+const input       = document.getElementById('exo-input');
+const resultsList = document.getElementById('exo-results');
+const loading     = document.getElementById('exo-loading');
+const emptyState  = document.getElementById('exo-empty');
+const emptyMsg    = document.getElementById('exo-empty-msg');
+const statsEl     = document.getElementById('exo-stats');
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Page mode helpers
+   ────────────────────────────────────────────────────────────────────────────── */
+function enterHeroMode() {
+  document.body.classList.add('hero-mode');
+  document.body.classList.remove('has-query', 'header-entering');
+  setTimeout(() => heroInput?.focus(), 120);
+}
+
+function enterResultsMode(animate) {
+  document.body.classList.remove('hero-mode');
+  document.body.classList.add('has-query');
+  if (animate) {
+    document.body.classList.add('header-entering');
+    setTimeout(() => document.body.classList.remove('header-entering'), 600);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Initial state
+   ────────────────────────────────────────────────────────────────────────────── */
+if (currentQuery) {
+  enterResultsMode(false);
+  if (input) input.value = currentQuery;
+  showLoading();
+} else {
+  enterHeroMode();
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Hero form submit — transition to results mode
+   ────────────────────────────────────────────────────────────────────────────── */
+document.getElementById('exo-hero-form')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const q = (heroInput?.value || '').trim();
+  if (!q) return;
+
+  // Animate hero out
+  heroSection.classList.add('hero-exiting');
+
+  setTimeout(() => {
+    enterResultsMode(true);
+    if (input) input.value = q;
+    showLoading();
+    const enc = encodeURIComponent(q);
+    // Trigger main-process re-search via hash change
+    if (location.hash.slice(1) === enc) {
+      location.hash = '';
+      requestAnimationFrame(() => { location.hash = enc; });
+    } else {
+      location.hash = enc;
+    }
+  }, 310);
+});
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Header form submit — re-search from results page
+   ────────────────────────────────────────────────────────────────────────────── */
+document.getElementById('exo-search-form')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const q = (input?.value || '').trim();
+  if (!q) return;
+  showLoading();
+  const enc = encodeURIComponent(q);
+  if (location.hash.slice(1) === enc) {
+    location.hash = '';
+    requestAnimationFrame(() => { location.hash = enc; });
+  } else {
+    location.hash = enc;
+  }
+});
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Keyboard shortcuts
+   ────────────────────────────────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === '/') {
+    const active = document.activeElement;
+    if (active !== input && active !== heroInput) {
+      e.preventDefault();
+      const target = document.body.classList.contains('hero-mode') ? heroInput : input;
+      target?.focus();
+      target?.select();
+    }
+  }
+});
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   UI helpers
+   ────────────────────────────────────────────────────────────────────────────── */
+function showLoading() {
+  loading.classList.remove('hidden');
+  resultsList.classList.add('hidden');
+  emptyState.classList.add('hidden');
+  statsEl.textContent = '';
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function highlightQuery(text, query) {
+  if (!query || !text) return escHtml(text);
+  const words = query.trim().split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return escHtml(text);
+  const re = new RegExp(
+    `(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')})`, 'gi'
+  );
+  return escHtml(text).replace(re, '<mark>$1</mark>');
+}
+
+function getFaviconUrl(url) {
+  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
+  catch (_) { return ''; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Main injection point — called by main.js via executeJavaScript
+   ────────────────────────────────────────────────────────────────────────────── */
+window.__exoResults = function(data) {
+  if (data.query && input) input.value = data.query;
+  currentQuery = data.query || '';
+  loading.classList.add('hidden');
+
+  if (!data.items || !data.items.length) {
+    resultsList.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    emptyMsg.textContent = data.noResultsMsg || 'Žádné výsledky pro tento dotaz.';
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  const t0   = performance.now();
+  const frag = document.createDocumentFragment();
+
+  data.items.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.className = 'result-item';
+    li.style.animationDelay = `${idx * 35}ms`;
+
+    const fav = getFaviconUrl(item.url);
+    li.innerHTML = `
+      <div class="result-accent-bar"></div>
+      <div class="result-num">${idx + 1}</div>
+      <div class="result-body">
+        <div class="result-domain-row">
+          ${fav ? `<img class="result-favicon" src="${escHtml(fav)}" width="14" height="14" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <span class="result-display-url">${escHtml(item.displayUrl || '')}</span>
+        </div>
+        <a class="result-title" href="${escHtml(item.url)}" title="${escHtml(item.url)}">
+          ${highlightQuery(item.title, currentQuery)}
+        </a>
+        ${item.snippet ? `<p class="result-snippet">${highlightQuery(item.snippet, currentQuery)}</p>` : ''}
+      </div>`;
+
+    frag.appendChild(li);
+  });
+
+  resultsList.innerHTML = '';
+  resultsList.appendChild(frag);
+  resultsList.classList.remove('hidden');
+
+  const ms = Math.round(performance.now() - t0);
+  statsEl.innerHTML = `<span class="stats-count">${data.items.length}</span> výsledků <span class="stats-time">· ${ms}ms</span>`;
+};
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Floating particles for hero
+   ────────────────────────────────────────────────────────────────────────────── */
+(function spawnParticles() {
+  const container = document.getElementById('hero-particles');
+  if (!container) return;
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('span');
+    p.className = 'hero-particle';
+    const size = 2 + Math.random() * 3;
+    const op   = 0.15 + Math.random() * 0.45;
+    p.style.cssText = [
+      `left:${Math.random() * 100}%`,
+      `top:${Math.random() * 100}%`,
+      `width:${size}px`,
+      `height:${size}px`,
+      `--op:${op}`,
+      `animation-duration:${5 + Math.random() * 9}s`,
+      `animation-delay:${-(Math.random() * 10)}s`,
+    ].join(';');
+    container.appendChild(p);
+  }
+})();
+</script>
+</body>
+</html>

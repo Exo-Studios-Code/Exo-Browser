@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <!--
+    exo-dl-overlay.html — Exo Browser — Download Manager Overlay
+    ─────────────────────────────────────────────────────────────
+    Tato stránka jede v SAMOSTATNÉM průhledném BrowserWindow (overlayWindow).
+    Létá NAD WebContentsView (taby), takže download panel je vždy viditelný.
+
+    Proč ne v index.html (toolbar)?
+    index.html je renderováno mainWindow.contentView — spodní vrstva.
+    WebContentsView taby jsou přidány jako child views → kryjí toolbar HTML.
+    Jakýkoli position:fixed prvek v index.html je za nativní tab vrstvou.
+
+    Bezpečnost:
+    • contextIsolation: true, nodeIntegration: false (stejné jako toolbar)
+    • preload.js exponuje jen potřebné download/overlay IPC metody
+    • CSP blokuje vše externí (stránka je čistě lokální)
+  -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline';" />
+
+  <style>
+    /* Průhledné pozadí — overlay nesmí kreslit nic mimo karty */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width:      100%;
+      height:     100%;
+      background: transparent;
+      overflow:   hidden;
+      /* Zakáže drag regionu — overlay nesmí být přetahovatelný */
+      -webkit-app-region: no-drag;
+      /* pointer-events none na body — průhledná plocha proklikává na tab.
+         .exo-dl-card má pointer-events:auto nastavené v exo-downloads.js CSS */
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+    exo-downloads.js dynamicky vytvoří #exo-dl-panel v DOM při prvním stahování.
+    Panel je position:fixed bottom-right, uvnitř tohoto průhledného okna.
+  -->
+  <script src="exo-downloads.js"></script>
+  <script>
+    // initDownloadManager() je synchronní — DOM je ready, browserAPI dostupné
+    // (preload.js běžel před načtením stránky)
+    initDownloadManager();
+  </script>
+
+</body>
+</html>

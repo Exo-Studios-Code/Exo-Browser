@@ -1,0 +1,3 @@
+dist/ 
+installer-output/ 
+node_modules/ 

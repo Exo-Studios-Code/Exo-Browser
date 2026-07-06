@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https: http:;" />
+  <title>Exo Browser</title>
+
+  <!-- DM Sans: geometric humanist for UI chrome -->
+  <!-- JetBrains Mono: monospaced for URL bar -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB BAR  (titlebar / drag region)  — 52px
+         ══════════════════════════════════════════════════════════ -->
+    <div id="tab-bar">
+
+      <!-- macOS-style window controls -->
+      <div id="window-controls">
+        <button class="wc-btn wc-close"    id="btn-close"    title="Zavřít"        aria-label="Close"></button>
+        <button class="wc-btn wc-minimize" id="btn-minimize" title="Minimalizovat" aria-label="Minimize"></button>
+        <button class="wc-btn wc-maximize" id="btn-maximize" title="Maximalizovat" aria-label="Maximize/Restore"></button>
+      </div>
+
+      <!-- Scrollable tab strip -->
+      <div id="tabs-scroll-area">
+        <div id="tabs-container" role="tablist" aria-label="Browser tabs"></div>
+      </div>
+
+      <!-- New-tab button -->
+      <button id="btn-new-tab" title="Nový tab (Ctrl+T)" aria-label="New tab">
+        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- App wordmark -->
+      <div id="app-wordmark" aria-hidden="true">EXO</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         NAVIGATION BAR — 44px
+         ══════════════════════════════════════════════════════════ -->
+    <div id="nav-bar">
+
+      <!-- Back / Forward / Reload -->
+      <div id="nav-btns" role="toolbar" aria-label="Navigation controls">
+        <button class="nav-btn" id="btn-back"    title="Zpět (Alt+←)"  aria-label="Go back"    disabled>
+          <svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="nav-btn" id="btn-forward" title="Vpřed (Alt+→)" aria-label="Go forward" disabled>
+          <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5"  stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="nav-btn" id="btn-reload"  title="Obnovit (F5)"  aria-label="Reload">
+          <svg id="icon-reload" viewBox="0 0 16 16" fill="none">
+            <path d="M13 2.5v4h-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12.3 9.5A5.5 5.5 0 1 1 11 4.2l2.2 2.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg id="icon-stop" viewBox="0 0 16 16" fill="none" class="hidden">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ── Search Engine Selector (cycle on click) ──────────── -->
+      <!--
+        WHY NOT A DROPDOWN: WebContentsView is a native layer positioned at
+        y=96px. Any HTML element that extends below y=96px is rendered under
+        the native view and never receives pointer events.
+        Solution: cycle-on-click + inline toast (stays within toolbar bounds).
+      -->
+      <div id="engine-selector" aria-label="Vybrat vyhledávač">
+        <button id="btn-engine" title="Klikni pro změnu vyhledávače">
+          <span id="engine-badge">D</span>
+        </button>
+        <!-- Toast appears inside nav-bar, never overlaps WebContentsView -->
+        <div id="engine-toast" class="hidden" aria-live="polite"></div>
+      </div>
+
+      <!-- URL / Search bar -->
+      <div id="url-bar-wrap" role="search">
+        <!-- Security badge -->
+        <span id="security-badge" aria-label="Connection secure" title="Secure connection">
+          <svg id="icon-secure" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1L2 3.5V7c0 3 2.2 5.7 5 6.3C9.8 12.7 12 10 12 7V3.5L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M4.5 7l1.8 1.8L9.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg id="icon-insecure" viewBox="0 0 14 14" fill="none" class="hidden">
+            <path d="M7 1L2 3.5V7c0 3 2.2 5.7 5 6.3C9.8 12.7 12 10 12 7V3.5L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M7 5v3M7 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </span>
+
+        <input
+          type="text"
+          id="url-bar"
+          placeholder="Hledat nebo zadat URL…"
+          autocomplete="off"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="Address and search bar"
+        />
+
+        <!-- Loading spinner -->
+        <span id="loading-ring" class="hidden" aria-hidden="true">
+          <span class="spinner"></span>
+        </span>
+      </div>
+
+      <!-- Right-side: Privacy Shield indicator + History + Sidebar toggle -->
+      <div id="nav-actions" aria-label="Browser actions">
+        <div id="shield-indicator" title="Exo Privacy Shield aktivní — blokuje trackery">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1.5L2.5 4v4c0 3.3 2.4 6.3 5.5 7 3.1-.7 5.5-3.7 5.5-7V4L8 1.5z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M5.5 8l1.8 1.8 3.2-3.3" stroke="currentColor" stroke-width="1.3"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <button id="btn-history" title="Historie (Ctrl+H)" aria-label="Toggle history sidebar" aria-pressed="false">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3.5 4.5A6.5 6.5 0 0 0 2 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+        </button>
+        <button id="btn-sidebar" title="GX Panel (Alt+G)" aria-label="Toggle GX sidebar" aria-pressed="false">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M5.5 2v12" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M8 6h5M8 8.5h3.5M8 11h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+          </svg>
+        </button>
+
+        <!-- ✨ AI Chat Sidebar -->
+        <button id="btn-ai-sidebar" title="AI Chat (Ctrl+Shift+A)" aria-label="Toggle AI sidebar" aria-pressed="false">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M5.5 8h5M8 5.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <!-- ✨ Settings -->
+        <button id="btn-settings" title="Nastavení (Ctrl+,)" aria-label="Otevřít nastavení">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M8 1.5v1.3M8 13.2v1.3M1.5 8h1.3M13.2 8h1.3M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9"
+                  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         GX GAMING SIDEBAR
+         Position: fixed left=0, top=96px
+         Width: 240px — WebContentsView shifts right when open
+         ══════════════════════════════════════════════════════════ -->
+    <aside id="gx-sidebar" class="hidden" aria-label="GX Performance Panel">
+
+      <!-- Header -->
+      <div class="gx-header">
+        <span class="gx-logo">EXO<span class="gx-logo-gx">GX</span></span>
+        <button class="gx-close" id="btn-sidebar-close" title="Zavřít panel" aria-label="Close sidebar">
+          <svg viewBox="0 0 10 10" width="10" fill="none">
+            <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ── GAMING MODE BUTTON ────────────────────────────────── -->
+      <div class="gx-gaming-wrap">
+        <button id="btn-gaming-mode" class="gx-gaming-btn" aria-pressed="false"
+          title="Gaming Mode — uspí neaktivní taby, vymaže cache (Alt+M)">
+          <span class="gm-bg-sweep" aria-hidden="true"></span>
+          <span class="gm-icon" aria-hidden="true">
+            <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- controller body -->
+              <path d="M4 8.5C4 7.1 5.1 6 6.5 6h9C16.9 6 18 7.1 18 8.5v2.8c0 2.6-1.6 4.9-4 5.9l-1.8.8a1 1 0 0 1-.8 0L9.6 17.2C7.6 16.2 6 13.9 6 11.3V8.5z" stroke="currentColor" stroke-width="1.3" fill="none"/>
+              <!-- D-pad cross -->
+              <path d="M8 10h2M9 9v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <!-- buttons -->
+              <circle cx="13.5" cy="9.5" r="0.7" fill="currentColor" opacity="0.7"/>
+              <circle cx="15"   cy="10.8" r="0.7" fill="currentColor" opacity="0.7"/>
+              <!-- lightning bolt center -->
+              <path d="M11.4 8.5l-1.2 2.2h1.4l-1.2 2.3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="gm-label">
+            <span class="gm-title">GAMING MODE</span>
+            <span class="gm-sub" id="gm-status-text">Neaktivní</span>
+          </span>
+          <span class="gm-pill" id="gm-pill" aria-hidden="true">OFF</span>
+        </button>
+        <p class="gm-hint">Uspí taby · Vymaže cache</p>
+      </div>
+
+      <!-- CPU Meter -->
+      <div class="gx-card" id="gx-cpu-card">
+        <div class="gx-card-header">
+          <span class="gx-card-icon">
+            <svg viewBox="0 0 14 14" fill="none" width="12">
+              <rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <rect x="5" y="5" width="4" height="4" rx="0.5" fill="currentColor" opacity="0.5"/>
+              <path d="M5 1v2M7 1v2M9 1v2M5 11v2M7 11v2M9 11v2M1 5h2M1 7h2M1 9h2M11 5h2M11 7h2M11 9h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="gx-card-label">CPU</span>
+          <span class="gx-card-value" id="gx-cpu-value">0%</span>
+        </div>
+        <div class="gx-bar-track">
+          <div class="gx-bar-fill" id="gx-cpu-bar" style="width:0%" data-type="cpu"></div>
+        </div>
+        <canvas id="gx-cpu-spark" class="gx-sparkline" width="210" height="28"></canvas>
+      </div>
+
+      <!-- RAM Meter -->
+      <div class="gx-card" id="gx-ram-card">
+        <div class="gx-card-header">
+          <span class="gx-card-icon">
+            <svg viewBox="0 0 14 14" fill="none" width="12">
+              <rect x="1" y="4" width="12" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M3 4V3M5 4V3M7 4V3M9 4V3M11 4V3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              <path d="M4 7h1M6.5 7h1M9 7h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="gx-card-label">RAM</span>
+          <span class="gx-card-value" id="gx-ram-value">-- MB</span>
+        </div>
+        <div class="gx-bar-track">
+          <div class="gx-bar-fill" id="gx-ram-bar" style="width:0%" data-type="ram"></div>
+        </div>
+        <div class="gx-bar-sub" id="gx-ram-sub">-- / -- GB</div>
+        <canvas id="gx-ram-spark" class="gx-sparkline" width="210" height="28"></canvas>
+      </div>
+
+      <!-- Privacy Shield stats -->
+      <div class="gx-card">
+        <div class="gx-card-header">
+          <span class="gx-card-icon" style="color:var(--c-secure)">
+            <svg viewBox="0 0 14 14" fill="none" width="12">
+              <path d="M7 1L2 3.5V7c0 3 2.2 5.7 5 6.3C9.8 12.7 12 10 12 7V3.5L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+              <path d="M4.5 7l1.8 1.8 3.2-3.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="gx-card-label">Privacy Shield</span>
+        </div>
+        <div class="gx-stat-row">
+          <span class="gx-stat-label">Blokováno</span>
+          <span class="gx-stat-num" id="gx-blocked">0</span>
+        </div>
+      </div>
+
+      <!-- Tabs stats -->
+      <div class="gx-card">
+        <div class="gx-card-header">
+          <span class="gx-card-icon">
+            <svg viewBox="0 0 14 14" fill="none" width="12">
+              <rect x="1" y="4" width="8" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M4 4V2.5A1 1 0 0 1 5 1.5h7.5A1 1 0 0 1 13 2.5V10a1 1 0 0 1-1 1H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="gx-card-label">Taby</span>
+        </div>
+        <div class="gx-stat-row">
+          <span class="gx-stat-label">Otevřených</span>
+          <span class="gx-stat-num" id="gx-tab-count">0</span>
+        </div>
+        <div class="gx-stat-row">
+          <span class="gx-stat-label">Spících</span>
+          <span class="gx-stat-num sleep" id="gx-sleep-count">0</span>
+        </div>
+      </div>
+
+      <!-- Clock -->
+      <div class="gx-card gx-clock-card">
+        <div class="gx-clock" id="gx-clock">--:--:--</div>
+        <div class="gx-date" id="gx-date">--</div>
+      </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════
+         HISTORY SIDEBAR — slides in from the RIGHT, 280px
+         ══════════════════════════════════════════════════════════ -->
+    <aside id="history-sidebar" class="hidden" aria-label="Historie prohlížení">
+
+      <!-- Header -->
+      <div class="hist-header">
+        <div class="hist-header-left">
+          <svg viewBox="0 0 16 16" fill="none" width="14" class="hist-header-icon">
+            <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="hist-title">Historie</span>
+        </div>
+        <div class="hist-header-right">
+          <button class="hist-clear-btn" id="btn-history-clear" title="Smazat veškerou historii">
+            <svg viewBox="0 0 14 14" fill="none" width="12">
+              <path d="M2 3.5h10M5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M3.5 3.5l.7 7.5a1 1 0 0 0 1 .9h3.6a1 1 0 0 0 1-.9l.7-7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Smazat vše
+          </button>
+          <button class="hist-close-btn" id="btn-history-close" title="Zavřít historii" aria-label="Close history">
+            <svg viewBox="0 0 10 10" width="10" fill="none">
+              <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="hist-search-wrap">
+        <svg viewBox="0 0 14 14" fill="none" width="12" class="hist-search-icon">
+          <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M9 9l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="history-search"
+          placeholder="Hledat v historii…"
+          autocomplete="off" spellcheck="false" aria-label="Hledat v historii"/>
+      </div>
+
+      <!-- List -->
+      <ul id="history-list" aria-label="Položky historie"></ul>
+
+      <!-- Empty state -->
+      <div id="history-empty" class="hist-empty hidden">
+        <svg viewBox="0 0 32 32" fill="none" width="32" class="hist-empty-icon">
+          <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="1.3" opacity="0.3"/>
+          <path d="M16 10v6.5l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+        </svg>
+        <p>Žádná historia</p>
+      </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ✨ SMART COMMAND BAR — Ctrl+Space
+         ══════════════════════════════════════════════════════════ -->
+    <div id="smart-cmd-overlay" class="hidden" role="dialog" aria-label="AI Command Bar" aria-modal="true">
+      <div id="smart-cmd-backdrop"></div>
+      <div id="smart-cmd-panel">
+        <div id="smart-cmd-header">
+          <svg viewBox="0 0 14 14" fill="none" width="13" aria-hidden="true">
+            <circle cx="7" cy="7" r="5.5" stroke="#a78bfa" stroke-width="1.2"/>
+            <path d="M4.5 7h5M7 4.5v5" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span>AI Příkaz</span>
+          <kbd>Esc</kbd>
+        </div>
+        <input type="text" id="smart-cmd-input"
+          placeholder="„Hledej React hooks", „Otevři GitHub", „Sroluj dolů"…"
+          autocomplete="off" spellcheck="false" aria-label="AI příkaz" />
+        <div id="smart-cmd-result" class="hidden"></div>
+        <div id="smart-cmd-examples">
+          <span>Příklady:</span>
+          <button class="cmd-ex" data-cmd="Sumarizuj tuto stránku">Sumarizovat stránku</button>
+          <button class="cmd-ex" data-cmd="Otevři nový tab s YouTube">YouTube</button>
+          <button class="cmd-ex" data-cmd="Sroluj dolů">Srolovat ↓</button>
+          <button class="cmd-ex" data-cmd="Hledej nejnovější zprávy AI">Hledat AI zprávy</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#app -->
+
+  <script src="renderer.js"></script>
+
+  <!--
+    Poznámka k Download Manageru:
+    exo-downloads.js se načítá v src/exo-dl-overlay.html (průhledný overlay BrowserWindow).
+    Nelze ho spustit zde — #exo-dl-panel by byl schovaný za WebContentsView (tab vrstvou).
+    Viz createOverlayWindow() v main.js.
+  -->
+</body>
+</html>

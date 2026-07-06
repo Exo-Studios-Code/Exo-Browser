@@ -1,0 +1,55 @@
+{
+  "name": "exo-browser",
+  "version": "1.0.0",
+  "description": "Exo — a modern, minimal Electron browser with dark-glass UI + AI Agent (Gemini)",
+  "main": "main.js",
+  "scripts": {
+    "start":     "electron .",
+    "dev":       "electron . --enable-logging --inspect=5858",
+    "build":     "electron-builder --win --x64",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "keywords": [
+    "electron",
+    "browser",
+    "chromium",
+    "ai",
+    "gemini"
+  ],
+  "author": "ExoGen",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "discord-rpc": "^4.0.1"
+  },
+  "devDependencies": {
+    "electron":         "42.4.0",
+    "electron-builder": "^25.1.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "build": {
+    "appId": "com.ex0studios.exobrowser",
+    "productName": "Exo Browser",
+    "copyright": "Copyright © 2026 Ex0 Studios",
+    "directories": {
+      "buildResources": "build-assets",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/.cache/**/*",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": [{ "target": "dir", "arch": ["x64"] }],
+      "icon": "build-assets/icon.ico",
+      "executableName": "ExoBrowser"
+    }
+  }
+}

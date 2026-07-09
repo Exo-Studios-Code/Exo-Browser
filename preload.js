@@ -15,8 +15,8 @@
  *  • Všechna data jsou validována před předáním do main procesu
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
 
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 // ─── Type-checked send helpers ────────────────────────────────────────────────
 
 const assertString = (v, name) => {
@@ -87,6 +87,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   // ── Performance Stats ───────────────────────────────────────────────────────
   getStats: () => ipcRenderer.invoke('get-perf-stats'),
 
+  // ── 🚨 Utils (PŘIDÁNO PRO PLUGIN MANAGER) ──────────────────────────────────
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   // ── Exo Search ──────────────────────────────────────────────────────────────
   exoSearch: (query, tabId) =>
     ipcRenderer.invoke('exo-search', {
@@ -216,8 +218,41 @@ contextBridge.exposeInMainWorld('browserAPI', {
     ipcRenderer.on('ai-sidebar-state', (_e, d) => cb(d)),
 
   // ════════════════════════════════════════════════════════════════════════════
-  // ✨ NOVÉ: Smart Command Bar
+  // ✨ NOVÉ: Plugin Manager
   // ════════════════════════════════════════════════════════════════════════════
+
+  /** Otevře Plugin Manager okno */
+  openPluginManager: () => ipcRenderer.send('open-plugin-manager'),
+  closePluginManager: () => ipcRenderer.send('close-plugin-manager'),
+
+  /** @returns {Promise<PluginInfo[]>} */
+  pluginsList: () => ipcRenderer.invoke('plugins-list'),
+
+  /** Znovu načte všechny pluginy ze složky */
+  pluginsReload: () => ipcRenderer.invoke('plugins-reload'),
+
+  /** Otevře složku pluginů v průzkumníku */
+  pluginsOpenDir: () => ipcRenderer.invoke('plugins-open-dir'),
+
+  /** @param {string} id */
+  pluginEnable:    (id) => ipcRenderer.invoke('plugin-enable',    { id }),
+  pluginDisable:   (id) => ipcRenderer.invoke('plugin-disable',   { id }),
+  pluginUninstall: (id) => ipcRenderer.invoke('plugin-uninstall', { id }),
+
+  /**
+   * Nainstaluje plugin ze ZIP.
+   * @param {string} filePath  Absolutní cesta k .zip souboru
+   */
+  pluginInstallZip: (filePath) =>
+    ipcRenderer.invoke('plugin-install-zip', { filePath }),
+
+  /** Poslouchá aktualizace seznamu pluginů */
+  onPluginsUpdated: (cb) => ipcRenderer.on('plugins-updated', (_e, d) => cb(d)),
+
+  /** Toolbar akce pluginu */
+  pluginToolbarAction: (id) => ipcRenderer.invoke('plugin-toolbar-action', { id }),
+
+
 
   /**
    * Rychlý AI příkaz z Command Baru.

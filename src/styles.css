@@ -1842,3 +1842,42 @@ button:focus-visible {
   background: var(--bg-tab-hover);
   color: var(--t-primary);
 }
+
+/* ── Plugin Manager button ────────────────────────────────────────────────── */
+#btn-plugins {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  color: var(--t-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+#btn-plugins svg { width: 15px; height: 15px; }
+#btn-plugins:hover {
+  background: var(--bg-tab-hover);
+  color: var(--t-primary);
+}
+
+/* Plugin toolbar buttons (dynamické) */
+.plugin-tb-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  color: var(--t-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.plugin-tb-btn:hover {
+  background: var(--bg-tab-hover);
+  color: var(--t-primary);
+}

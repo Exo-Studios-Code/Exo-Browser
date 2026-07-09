@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"/>
+  <title>Exo — Plugin Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:       #080810;
+      --surface:  #0e0e1a;
+      --surface2: #14142a;
+      --border:   rgba(167,139,250,.15);
+      --accent:   #a78bfa;
+      --accent2:  #38bdf8;
+      --green:    #4ade80;
+      --red:      #f87171;
+      --yellow:   #fbbf24;
+      --text:     #e2e8f0;
+      --dim:      #64748b;
+      --r:        10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Titlebar ──────────────────────────────────────────────────────────── */
+    #titlebar {
+      -webkit-app-region: drag;
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #tb-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #btn-pm-close {
+      -webkit-app-region: no-drag;
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--dim);
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 6px;
+      transition: background .15s, color .15s;
+    }
+    #btn-pm-close:hover { background: rgba(248,113,113,.15); color: var(--red); }
+
+    /* ── Layout ────────────────────────────────────────────────────────────── */
+    #content { max-width: 760px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    /* ── Stats bar ─────────────────────────────────────────────────────────── */
+    #stats-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-chip strong { color: var(--text); }
+
+    /* ── Section header ────────────────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .btn-primary { background: rgba(167,139,250,.13); color: var(--accent); border-color: rgba(167,139,250,.28); }
+    .btn-primary:hover { background: rgba(167,139,250,.24); }
+    .btn-neutral { background: rgba(255,255,255,.04); color: var(--dim); }
+    .btn-neutral:hover { background: rgba(255,255,255,.09); color: var(--text); }
+    .btn-danger  { background: rgba(248,113,113,.08); color: var(--red); border-color: rgba(248,113,113,.2); }
+    .btn-danger:hover { background: rgba(248,113,113,.18); }
+    .btn-sm { padding: 4px 10px; font-size: 11.5px; }
+
+    /* ── Install zone ──────────────────────────────────────────────────────── */
+    #install-zone {
+      border: 2px dashed rgba(167,139,250,.2);
+      border-radius: var(--r);
+      padding: 28px 20px;
+      text-align: center;
+      margin-bottom: 28px;
+      transition: border-color .2s, background .2s;
+      cursor: pointer;
+      position: relative;
+    }
+    #install-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(167,139,250,.06);
+    }
+    #install-zone-icon { font-size: 28px; margin-bottom: 10px; }
+    #install-zone p { font-size: 13px; color: var(--dim); line-height: 1.6; }
+    #install-zone strong { color: var(--text); }
+    #install-file { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    /* ── Plugin card ───────────────────────────────────────────────────────── */
+    #plugin-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .plugin-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: border-color .2s;
+    }
+    .plugin-card:hover { border-color: rgba(167,139,250,.3); }
+    .plugin-card.disabled { opacity: .5; }
+
+    .plugin-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+      overflow: hidden;
+    }
+    .plugin-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+    .plugin-info { flex: 1; min-width: 0; }
+    .plugin-name {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+    .plugin-version {
+      font-size: 10.5px;
+      color: var(--dim);
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    .plugin-author { font-size: 11.5px; color: var(--dim); margin-top: 2px; }
+    .plugin-desc   { font-size: 12.5px; color: #94a3b8; margin-top: 5px; line-height: 1.5; }
+
+    .plugin-permissions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .perm-pill {
+      font-size: 10.5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(251,191,36,.08);
+      border: 1px solid rgba(251,191,36,.18);
+      color: var(--yellow);
+    }
+    .perm-pill.trusted {
+      background: rgba(248,113,113,.08);
+      border-color: rgba(248,113,113,.2);
+      color: var(--red);
+    }
+
+    .plugin-matches {
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .plugin-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 38px;
+      height: 21px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 21px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      background: var(--dim);
+      border-radius: 50%;
+      transition: transform .2s, background .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: rgba(167,139,250,.2); border-color: var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(17px) translateY(-50%); background: var(--accent); }
+
+    /* ── Empty state ───────────────────────────────────────────────────────── */
+    #empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--dim);
+      display: none;
+    }
+    #empty-state.show { display: block; }
+    #empty-state svg { opacity: .2; margin-bottom: 14px; }
+
+    /* ── Toast ─────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; }
+    #toast.ok  { color: var(--green); }
+    #toast.err { color: var(--red); }
+
+    /* ── Dev Guide ─────────────────────────────────────────────────────────── */
+    #dev-guide {
+      margin-top: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    #dev-guide-header {
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: border-color .2s;
+      user-select: none;
+    }
+    #dev-guide-header:hover { background: rgba(255,255,255,.03); }
+    #dev-guide-header.open { border-color: var(--border); }
+    #dev-guide-title { font-size: 12px; font-weight: 600; color: var(--accent2); }
+    #dev-guide-chevron { margin-left: auto; color: var(--dim); font-size: 12px; transition: transform .2s; }
+    #dev-guide-header.open #dev-guide-chevron { transform: rotate(180deg); }
+    #dev-guide-body { display: none; padding: 18px; }
+    #dev-guide-body.show { display: block; }
+    #dev-guide-body pre {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    #dev-guide-body p { font-size: 13px; color: var(--dim); margin-bottom: 10px; line-height: 1.6; }
+    #dev-guide-body h4 { font-size: 12px; font-weight: 600; color: var(--accent); margin: 14px 0 6px; letter-spacing: .06em; }
+  </style>
+</head>
+<body>
+
+  <div id="titlebar">
+    <svg viewBox="0 0 14 14" fill="none" width="13">
+      <rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="#a78bfa" stroke-width="1.2"/>
+      <path d="M4.5 7h5M7 4.5v5" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    <span id="tb-title">PLUGIN MANAGER</span>
+    <div style="display:flex;gap:8px;-webkit-app-region:no-drag;margin-left:auto">
+      <button class="btn btn-neutral btn-sm" id="btn-open-dir" title="Open plugins folder">📁 Folder</button>
+      <button class="btn btn-neutral btn-sm" id="btn-reload">↺ Reload</button>
+      <button id="btn-pm-close" aria-label="Close">
+        <svg viewBox="0 0 10 10" width="10" fill="none">
+          <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- Stats -->
+    <div id="stats-bar">
+      <div class="stat-chip">🧩 Total: <strong id="stat-total">0</strong></div>
+      <div class="stat-chip">✅ Active: <strong id="stat-enabled">0</strong></div>
+      <div class="stat-chip">⛔ Disabled: <strong id="stat-disabled">0</strong></div>
+    </div>
+
+    <!-- Install zone -->
+    <div id="install-zone" title="Install plugin from ZIP">
+      <input type="file" id="install-file" accept=".zip" />
+      <div id="install-zone-icon">📦</div>
+      <p><strong>Drag &amp; drop a plugin .zip file</strong> or click to browse.<br>
+         The plugin must contain a <code>manifest.json</code> in the root of the ZIP.</p>
+    </div>
+
+    <!-- Plugin list -->
+    <div class="section-header">
+      <span class="section-title">Installed Plugins</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div id="plugin-list"></div>
+    <div id="empty-state">
+      <svg viewBox="0 0 48 48" fill="none" width="48" style="display:block;margin:0 auto">
+        <rect x="6" y="6" width="36" height="36" rx="6" stroke="#a78bfa" stroke-width="1.5"/>
+        <path d="M16 24h16M24 16v16" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p style="margin-top:12px;font-size:13px">No plugins yet.<br>Install your first one by dropping a ZIP file above.</p>
+    </div>
+
+    <!-- Developer Guide -->
+    <div id="dev-guide">
+      <div id="dev-guide-header">
+        <svg viewBox="0 0 14 14" fill="none" width="13">
+          <path d="M4 4.5L1.5 7 4 9.5M10 4.5L12.5 7 10 9.5M8 2.5l-2 9" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="dev-guide-title">Developer Guide — How to write a plugin</span>
+        <span id="dev-guide-chevron">▾</span>
+      </div>
+      <div id="dev-guide-body">
+        <p>A plugin is a folder with the following files, packed into a <strong>.zip</strong>:</p>
+
+        <h4>manifest.json</h4>
+        <pre>{
+  "id":          "my-plugin",
+  "name":        "My Plugin",
+  "version":     "1.0.0",
+  "description": "What this plugin does",
+  "author":      "Your Name",
+  "permissions": ["storage", "notifications"],
+  "content_scripts": {
+    "matches": ["*://youtube.com/*", "*://*.github.com/*"],
+    "js":      "content.js",
+    "css":     "styles.css"
+  },
+  "toolbar_action": {
+    "icon":    "icon.svg",
+    "tooltip": "Run plugin"
+  }
+}</pre>
+
+        <h4>content.js — available API</h4>
+        <pre>// window.exo is available in the content script
+
+// Logging
+exo.log('Hello from page', location.href);
+
+// Storage (localStorage scoped to the plugin namespace)
+exo.storage.set('counter', 42);
+const c = exo.storage.get('counter');  // → 42
+
+// Notifications
+exo.notify('Plugin active', 'Page has been loaded.');
+
+// Clipboard
+exo.clipboard.write('copied text');
+
+// Plugin info
+console.log(exo.plugin.name, exo.plugin.version);
+
+// Regular DOM manipulation
+document.querySelectorAll('.ad').forEach(el => el.remove());</pre>
+
+        <h4>URL Patterns (matches)</h4>
+        <pre>"*://youtube.com/*"        — YouTube only
+"*://*.github.com/*"       — GitHub and subdomains
+"https://*/path/*"         — HTTPS with /path/ only
+"&lt;all_urls&gt;"               — all pages</pre>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    'use strict';
+    const api = window.browserAPI;
+
+    // ── DOM ──────────────────────────────────────────────────────────────────
+    const pluginList   = document.getElementById('plugin-list');
+    const emptyState   = document.getElementById('empty-state');
+    const statTotal    = document.getElementById('stat-total');
+    const statEnabled  = document.getElementById('stat-enabled');
+    const statDisabled = document.getElementById('stat-disabled');
+    const installZone  = document.getElementById('install-zone');
+    const installFile  = document.getElementById('install-file');
+    const btnReload    = document.getElementById('btn-reload');
+    const btnOpenDir   = document.getElementById('btn-open-dir');
+    const btnClose     = document.getElementById('btn-pm-close');
+    const devHeader    = document.getElementById('dev-guide-header');
+    const devBody      = document.getElementById('dev-guide-body');
+
+    let toastTimer = null;
+
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    function toast(msg, type = 'ok') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className   = `show ${type}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+    }
+
+    // ── Render plugins ────────────────────────────────────────────────────────
+    function renderPlugins(plugins) {
+      pluginList.innerHTML = '';
+      const enabled  = plugins.filter(p => p.enabled).length;
+      statTotal.textContent    = plugins.length;
+      statEnabled.textContent  = enabled;
+      statDisabled.textContent = plugins.length - enabled;
+
+      if (!plugins.length) {
+        emptyState.classList.add('show');
+        return;
+      }
+      emptyState.classList.remove('show');
+
+      plugins.forEach(p => {
+        const card = document.createElement('div');
+        card.className = `plugin-card${p.enabled ? '' : ' disabled'}`;
+        card.dataset.id = p.id;
+
+        const perms = p.permissions.map(perm =>
+          `<span class="perm-pill">${perm}</span>`
+        ).join('');
+        const trustedBadge = p.trusted
+          ? `<span class="perm-pill trusted">⚠ trusted (Node.js)</span>`
+          : '';
+
+        const matches = p.matches.join(', ').slice(0, 80);
+
+        card.innerHTML = `
+          <div class="plugin-icon">
+            ${p.toolbarIcon
+              ? `<img src="${p.toolbarIcon}" alt="${p.name}"/>`
+              : `<span>🧩</span>`}
+          </div>
+          <div class="plugin-info">
+            <div class="plugin-name">
+              ${esc(p.name)}
+              <span class="plugin-version">${esc(p.version)}</span>
+            </div>
+            ${p.author ? `<div class="plugin-author">by ${esc(p.author)}</div>` : ''}
+            <div class="plugin-desc">${esc(p.description)}</div>
+            <div class="plugin-permissions">${perms}${trustedBadge}</div>
+            <div class="plugin-matches" title="${esc(p.matches.join(', '))}">🌐 ${esc(matches)}${p.matches.join(',').length > 80 ? '…' : ''}</div>
+          </div>
+          <div class="plugin-actions">
+            <label class="toggle" title="${p.enabled ? 'Disable' : 'Enable'}">
+              <input type="checkbox" class="toggle-enable" ${p.enabled ? 'checked' : ''} data-id="${p.id}"/>
+              <span class="toggle-slider"></span>
+            </label>
+            <button class="btn btn-danger btn-sm btn-uninstall" data-id="${p.id}" title="Uninstall">🗑</button>
+            ${p.homepage ? `<a href="#" class="btn btn-neutral btn-sm btn-homepage" data-url="${esc(p.homepage)}" title="Homepage">🔗</a>` : ''}
+          </div>
+        `;
+        pluginList.appendChild(card);
+      });
+
+      // Eventy
+      pluginList.querySelectorAll('.toggle-enable').forEach(chk => {
+        chk.addEventListener('change', async () => {
+          const id = chk.dataset.id;
+          if (chk.checked) {
+            await api.pluginEnable(id);
+            toast(`Plugin enabled ✓`);
+          } else {
+            await api.pluginDisable(id);
+            toast(`Plugin disabled.`);
+          }
+          await loadPlugins();
+        });
+      });
+
+      pluginList.querySelectorAll('.btn-uninstall').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (!confirm(`Uninstall plugin "${id}"? This action cannot be undone.`)) return;
+          const res = await api.pluginUninstall(id);
+          if (res.ok) { toast('Plugin uninstalled.'); await loadPlugins(); }
+          else toast('Error: ' + res.error, 'err');
+        });
+      });
+
+      pluginList.querySelectorAll('.btn-homepage').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          api.navigate(btn.dataset.url);
+        });
+      });
+    }
+
+    // ── Load plugins ──────────────────────────────────────────────────────────
+    async function loadPlugins() {
+      const plugins = await api.pluginsList();
+      renderPlugins(plugins);
+    }
+
+    // ── Install from ZIP ──────────────────────────────────────────────────────
+    async function installZip(filePath) {
+      installZone.querySelector('#install-zone-icon').textContent = '⏳';
+      const res = await api.pluginInstallZip(filePath);
+      installZone.querySelector('#install-zone-icon').textContent = '📦';
+      if (res.ok) {
+        toast(`✓ Installed: ${res.name}`);
+        await loadPlugins();
+      } else {
+        toast('Install error: ' + res.error, 'err');
+      }
+    }
+
+// ── Drag & drop ───────────────────────────────────────────────────────────
+    installZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      installZone.classList.add('drag-over');
+    });
+    
+    installZone.addEventListener('dragleave', () => {
+      installZone.classList.remove('drag-over');
+    });
+    
+    installZone.addEventListener('drop', async e => {
+      e.preventDefault();
+      installZone.classList.remove('drag-over');
+      
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      
+      if (!file.name.endsWith('.zip')) { 
+        toast('Please select a .zip file', 'err'); 
+        return; 
+      }
+
+      // 🚨 KLÍČOVÁ OPRAVA PRO ELECTRON (Získání skutečné cesty)
+      const safePath = api.getPathForFile(file) || file.path;
+      
+      if (!safePath) {
+        toast('Security block: Cannot read file path. Update preload.js!', 'err');
+        return;
+      }
+
+      await installZip(safePath);
+    });
+
+    // ── Kliknutí na zónu (výběr souboru přes dialog) ─────────────────────────
+    installFile.addEventListener('change', async () => {
+      const safePath = api.getPathForFile(file) || file.path;
+      if (file) {
+        const safePath = window.electron?.webUtils?.getPathForFile(file) || file.path;
+        
+        if (safePath) {
+          await installZip(safePath);
+        } else {
+          toast('Security block: Cannot read file path. Update preload.js!', 'err');
+        }
+      }
+      installFile.value = '';
+    });
+    installFile.addEventListener('change', async () => {
+      const file = installFile.files[0];
+      if (file) await installZip(file.path);
+      installFile.value = '';
+    });
+
+    // ── Reload ────────────────────────────────────────────────────────────────
+    btnReload.addEventListener('click', async () => {
+      await api.pluginsReload();
+      await loadPlugins();
+      toast('Plugins reloaded ✓');
+    });
+
+    // ── Open dir ─────────────────────────────────────────────────────────────
+    btnOpenDir.addEventListener('click', () => api.pluginsOpenDir());
+
+    // ── Close ─────────────────────────────────────────────────────────────────
+    btnClose.addEventListener('click', () => api.closePluginManager?.());
+
+    // ── Dev guide toggle ──────────────────────────────────────────────────────
+    devHeader.addEventListener('click', () => {
+      devHeader.classList.toggle('open');
+      devBody.classList.toggle('show');
+    });
+
+    // ── Listen for plugin updates from main ────────────────────────────────────
+    api.onPluginsUpdated?.(plugins => renderPlugins(plugins));
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function esc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadPlugins();
+  </script>
+</body>
+</html>

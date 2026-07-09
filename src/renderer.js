@@ -961,3 +961,60 @@ function dayLabel(d) {
     });
   });
 })();
+
+// ════════════════════════════════════════════════════════════════════════════
+// ✨ PLUGIN MANAGER Button
+// ════════════════════════════════════════════════════════════════════════════
+(function setupPluginManager() {
+  const btn = document.getElementById('btn-plugins');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => api.openPluginManager());
+
+  // Ctrl+Shift+P
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      api.openPluginManager();
+    }
+  });
+
+  // Zobrazí plugin toolbar tlačítka pokud plugin má toolbar_action
+  api.onPluginsUpdated?.((plugins) => {
+    renderPluginToolbarButtons(plugins);
+  });
+
+  // Načti hned při startu
+  api.pluginsList?.().then(plugins => renderPluginToolbarButtons(plugins)).catch(() => {});
+
+  function renderPluginToolbarButtons(plugins) {
+    // Smaž existující plugin toolbar tlačítka
+    document.querySelectorAll('.nav-btn.plugin-tb-btn').forEach(b => b.remove());
+    const navActions = document.getElementById('nav-actions');
+    if (!navActions) return;
+
+    const withToolbar = plugins.filter(p => p.enabled && p.hasToolbar);
+    withToolbar.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'nav-btn plugin-tb-btn';
+      b.title = p.toolbarTooltip || p.name;
+      b.setAttribute('aria-label', p.name);
+      b.dataset.pluginId = p.id;
+      if (p.toolbarIcon) {
+        const img = document.createElement('img');
+        img.src = p.toolbarIcon;
+        img.width = 15;
+        img.height = 15;
+        img.style.borderRadius = '3px';
+        b.appendChild(img);
+      } else {
+        b.textContent = '🧩';
+        b.style.fontSize = '13px';
+      }
+      b.addEventListener('click', () => api.pluginToolbarAction?.(p.id));
+      // Vlož před btn-plugins
+      const btnPlugins = document.getElementById('btn-plugins');
+      navActions.insertBefore(b, btnPlugins);
+    });
+  }
+})();

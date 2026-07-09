@@ -12,9 +12,9 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 #define AppName       "Exo Browser"
-#define AppVersion    "1.0.0"
+#define AppVersion    "1.1.0"
 #define AppPublisher  "Ex0 Studios"
-#define AppURL        "https://discord.gg/PZw3XZ2BaR"
+#define AppURL        "https://discord.gg/b5B9tzHNEv"
 #define AppExeName    "ExoBrowser.exe"
 #define AppId         "{{A7B3C2D1-4E5F-6789-ABCD-EF0123456789}"
 #define SourceDir     "dist\win-unpacked"

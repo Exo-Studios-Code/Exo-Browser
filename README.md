@@ -1,48 +1,56 @@
-# Nyx Browser
+# Ex0 Browser
+<img width="1914" height="1029" alt="obrazek" src="https://github.com/user-attachments/assets/49325943-b0e5-4942-903b-b426c9d1c60e" />
 
-> Moderní, minimalistický webový prohlížeč postavený na Electronu 29 + Chromiu.  
-> Design: *Midnight Glass* — hluboká tma, irideskentní akcenty, přesnost.
+# Exo-Browser 🚀
+Developed by **Ex0 Studios**
+
+Exo-Browser is a modern, minimal web browser built on top of Electron and Chromium. 
+
+> **Design Aesthetic:** *Midnight Glass* — deep blacks, iridescent accents, and absolute precision.
 
 ---
 
-## Rychlý start
+## Quick Start
 
 ```bash
-# 1. Naklonovat / rozbalit projekt
-cd nyx-browser
+# 1. Clone / extract the project and navigate into the directory
+cd Exo-Browser
 
-# 2. Nainstalovat závislosti (pouze Electron)
+# 2. Install dependencies
 npm install
 
-# 3. Spustit
+# 3. Launch the application
 npm start
 
-# Pro vývoj s logy:
+# For development with full logging enabled:
 npm run dev
+
 ```
 
-**Požadavky:** Node.js 18+, npm 9+  
-**Electron:** 29.x (vyžaduje `WebContentsView` API)
+**Requirements:** Node.js 18+, npm 9+
+
+**Core Framework:** Electron (utilizes the modern `WebContentsView` API)
 
 ---
 
-## Struktura projektu
+## Project Structure
 
 ```
-nyx-browser/
-├── main.js          ← Hlavní proces: okno, správa tabů, IPC handlery
-├── preload.js       ← Bezpečný bridge (contextBridge) mezi main ↔ renderer
+Exo-Browser/
+├── main.js          Custom new-tab page — lokální HTML s vyhledávačem a oblíbenými weby
+├── preload.js       History — SQLite via better-sqlite3
 ├── package.json
 ├── .gitignore
 └── src/
-    ├── index.html   ← Toolbar shell (tab bar + nav bar)
-    ├── styles.css   ← Celé UI — dark glass design
-    └── renderer.js  ← Frontend logika, IPC eventy, rendering tabů
+    ├── index.html   DevTools — Ctrl+Shift+I → view.webContents.openDevTools()
+    ├── styles.css   Extensions — Chromium extensions via session.loadExtension()
+    └── renderer.js  Packaging — electron-builder pro .dmg / .exe / .AppImage
+
 ```
 
 ---
 
-## Architektura
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -53,52 +61,61 @@ nyx-browser/
 │  │  Nav Bar (44px)  — ← → ↺  │ 🔒 URL bar           │  │
 │  ├───────────────────────────────────────────────────┤  │
 │  │                                                   │  │
-│  │   WebContentsView  (Tab 1 — aktivní)              │  │
-│  │   WebContentsView  (Tab 2 — skrytý)               │  │
-│  │   WebContentsView  (Tab N — skrytý)               │  │
+│  │   WebContentsView  (Tab 1 — Active)               │  │
+│  │   WebContentsView  (Tab 2 — Hidden)               │  │
+│  │   WebContentsView  (Tab N — Hidden)               │  │
 │  │                                                   │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 
 main.js  ←──IPC (ipcMain)──→  preload.js  ←──contextBridge──→  renderer.js
+
 ```
 
-### Bezpečnostní model
-| Vlastnost | Hodnota | Důvod |
-|---|---|---|
-| `contextIsolation` | `true` | Renderer nemá přístup k Node.js scope |
-| `nodeIntegration` | `false` | Žádný `require()` v renderer procesu |
-| `sandbox` | `true` | WebContentsView (tabu) jsou plně sandboxované |
-| `contextBridge` | Ano | Jediný způsob komunikace renderer ↔ main |
+### Security Model
+
+| Feature | Value | Purpose |
+| --- | --- | --- |
+| `contextIsolation` | `true` | Renderer process has no access to Node.js scope |
+| `nodeIntegration` | `false` | Disables `require()` inside the renderer process |
+| `sandbox` | `true` | `WebContentsView` tabs are fully sandboxed |
+| `contextBridge` | `true` | The only secure method for renderer ↔ main communication |
 
 ---
 
-## Klávesové zkratky
+## Keyboard Shortcuts
 
-| Zkratka | Akce |
-|---|---|
-| `Ctrl+T` | Nový tab |
-| `Ctrl+W` | Zavřít aktivní tab |
-| `Ctrl+L` | Fokus URL baru |
-| `Ctrl+R` / `F5` | Obnovit stránku |
-| `Alt+←` | Zpět |
-| `Alt+→` | Vpřed |
-| Prostřední klik na tab | Zavřít tab |
-
----
-
-## Rozšíření MVP (doporučené další kroky)
-
-1. **Bookmarks** — `electron-store` pro persistenci záložek
-2. **Sidebar** — Arc-style vertikální tab panel (`flexDirection: column`)
-3. **Custom new-tab page** — lokální HTML s vyhledávačem a oblíbenými weby
-4. **History** — SQLite via `better-sqlite3`
-5. **DevTools** — `Ctrl+Shift+I` → `view.webContents.openDevTools()`
-6. **Extensions** — Chromium extensions via `session.loadExtension()`
-7. **Packaging** — `electron-builder` pro `.dmg` / `.exe` / `.AppImage`
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl + T` | Open new tab |
+| `Ctrl + W` | Close active tab |
+| `Ctrl + L` | Focus URL bar |
+| `Ctrl + R` / `F5` | Reload page |
+| `Alt + ←` | Go back |
+| `Alt + →` | Go forward |
+| `Middle Click` | Close clicked tab |
 
 ---
 
-## Licence
+## Core Features & Extensions
 
-MIT
+* **Gemini AI Agent:** Built-in active sidebar capable of analyzing, summarizing, and explaining content from your active tabs in real-time.
+* **Discord Rich Presence:** Automated RPC client integration to share your active browsing status on Discord.
+* **Production Packaging:** Fully configured deployment system using `electron-builder` and `Inno Setup`.
+
+---
+
+## 💬 Community & Downloads
+
+Get the official compiled builds or join our dev team:
+
+📦 **[Download Latest Installer (.exe)](https://github.com/Exo-Studios-Code/Exo-Browser/releases/tag/v1.0.0)**
+
+👉 **[Join the Official Ex0 Studios Discord Server](https://discord.gg/b5B9tzHNEv)**
+
+---
+
+## License
+
+This project is licensed under the **MIT License** by **Ex0 Studios**. See the full `LICENSE.txt` for details.
+<img width="1908" height="1027" alt="obrazek" src="https://github.com/user-attachments/assets/9fc73b0d-b175-4190-b712-944b81025f35" />

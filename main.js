@@ -18,6 +18,9 @@ const os      = require('os');
 // ── AI Agent (Gemini) ─────────────────────────────────────────────────────────
 const { registerAgentIPC, agentEmitter } = require('./src/exo-ai-agent');
 
+// ── Plugin Engine ─────────────────────────────────────────────────────────────
+const { PluginEngine, registerPluginIPC } = require('./src/exo-plugin-engine');
+
 // ── Exo internal URL scheme helpers ──────────────────────────────────────────
 /** Local file:// URL for the New Tab page */
 const EXO_NEWTAB_FILE = path.join(__dirname, 'src', 'exo-newtab.html');
@@ -246,6 +249,11 @@ let blockedCount = 0;   // Privacy Shield: lifetime blocked request counter
 let settingsWindow  = null;
 /** @type {BrowserWindow|null} AI Chat Sidebar window */
 let aiSidebarWindow = null;
+/** @type {BrowserWindow|null} Plugin Manager window */
+let pluginManagerWindow = null;
+
+/** @type {PluginEngine|null} Plugin engine singleton */
+let pluginEngine = null;
 
 /**
  * @type {Map<number, {
@@ -457,6 +465,36 @@ function getActiveTab() {
   return tab ? { view: tab.view, url: tab.url, title: tab.title } : null;
 }
 
+// ─── Plugin Manager Window ────────────────────────────────────────────────────
+
+function createPluginManagerWindow() {
+  if (pluginManagerWindow) { pluginManagerWindow.focus(); return; }
+  const b = mainWindow.getBounds();
+  pluginManagerWindow = new BrowserWindow({
+    width:  800,
+    height: 620,
+    x: Math.round(b.x + b.width  / 2 - 400),
+    y: Math.round(b.y + b.height / 2 - 310),
+    frame: false,
+    resizable: true,
+    minWidth: 600,
+    minHeight: 400,
+    parent: mainWindow,
+    modal: false,
+    show: false,
+    backgroundColor: '#080810',
+    webPreferences: {
+      preload:          path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration:  false,
+      sandbox:          false,
+    },
+  });
+  pluginManagerWindow.loadFile(path.join(__dirname, 'src', 'exo-plugins.html'));
+  pluginManagerWindow.once('ready-to-show', () => pluginManagerWindow.show());
+  pluginManagerWindow.on('closed', () => { pluginManagerWindow = null; });
+}
+
 
 
 /**
@@ -606,6 +644,11 @@ function wireTabEvents(tabId, view) {
       await view.webContents.insertCSS(DARK_INJECT_CSS, { cssOrigin: 'user' });
       await view.webContents.executeJavaScript(DARK_INJECT_JS);
     } catch (_) { /* page may have strict CSP — silently skip */ }
+
+    // ✨ Plugin content script injekce
+    if (pluginEngine) {
+      pluginEngine.injectIntoTab(view.webContents, stopUrl, tabId).catch(() => {});
+    }
   });
 
   view.webContents.on('did-navigate', (_e, navUrl) => {
@@ -1011,6 +1054,10 @@ ipcMain.on('history-sidebar-toggle', (_e, { open }) => {
 ipcMain.on('open-settings',  () => createSettingsWindow());
 ipcMain.on('close-settings', () => settingsWindow?.close());
 
+// ── Plugin Manager ────────────────────────────────────────────────────────────
+ipcMain.on('open-plugin-manager',  () => createPluginManagerWindow());
+ipcMain.on('close-plugin-manager', () => pluginManagerWindow?.close());
+
 // ── AI Sidebar ────────────────────────────────────────────────────────────────
 ipcMain.on('ai-sidebar-toggle', (_e, { open }) => {
   aiSidebarOpen = open;
@@ -1115,6 +1162,16 @@ app.whenReady().then(() => {
   // ✨ AI Agent (Gemini) — registrace IPC handlerů
   registerAgentIPC(ipcMain, getActiveTab, app.getPath('userData'));
   agentEmitter.on('create-tab', (url) => createTab(url));
+
+  // ✨ Plugin Engine — inicializace a IPC
+  pluginEngine = new PluginEngine(
+    app.getPath('userData'),
+    () => tabs,
+    () => activeTabId,
+    mainWindow
+  );
+  pluginEngine.loadAll();
+  registerPluginIPC(pluginEngine, mainWindow);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

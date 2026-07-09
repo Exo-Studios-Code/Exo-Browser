@@ -43,7 +43,7 @@ npm run dev
 
 ---
 
-
+## Project Structure
 
 ## 📂 Project Structure
 
@@ -72,6 +72,10 @@ Exo-Browser/
     ├── exo-settings.html    # Uživatelské rozhraní nastavení prohlížeče
     ├── background.png       # Hlavní grafika na pozadí aplikace
     └── icon.ico / *.png     # Balík ikon, favicon a manifestů pro build
+	```
+
+---
+
 
 ## Architecture
 

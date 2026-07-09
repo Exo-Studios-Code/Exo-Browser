@@ -43,22 +43,35 @@ npm run dev
 
 ---
 
-## Project Structure
 
-```
+
+## 📂 Project Structure
+
+```text
 Exo-Browser/
-├── main.js          Custom new-tab page — lokální HTML s vyhledávačem a oblíbenými weby
-├── preload.js       History — SQLite via better-sqlite3
-├── package.json
-├── .gitignore
-└── src/
-    ├── index.html   DevTools — Ctrl+Shift+I → view.webContents.openDevTools()
-    ├── styles.css   Extensions — Chromium extensions via session.loadExtension()
-    └── renderer.js  Packaging — electron-builder pro .dmg / .exe / .AppImage
-
-```
-
----
+├── main.js                  # Electron Main Process (backend, správa oken a procesů)
+├── preload.js               # Bezpečnostní můstek (Context Bridge) a IPC komunikace
+├── package.json             # NPM závislosti, metadata a build skripty
+├── .gitignore               # Zabezpečení proti pushování nepotřebných dat (.zip, .iss)
+└── src/                     # Hlavní složka s frontendem a logikou funkcí
+    ├── index.html           # Hlavní okno prohlížeče (UI kostra)
+    ├── renderer.js          # Logika frontendového rozhraní (správa tabů, navigace)
+    ├── styles.css           # Hlavní kaskádové styly prohlížeče
+    ├── exo-ai-agent.js      # Backend komunikace pro integraci modelu Gemini 2.5 Flash
+    ├── exo-ai-sidebar.html  # Uživatelské rozhraní pro AI postranní panel
+    ├── exo-downloads.js     # Logika pro stahování a blokování reklam (AdBlock)
+    ├── exo-dl-overlay.html  # UI vrstva pro historii stahování
+    ├── exo-newtab.html      # Design Nové karty (domovská obrazovka s grafikou)
+    ├── exo-pilot.js         # Backend logika pro asistenta Exo Pilot
+    ├── exo-pilot-preload.js # Izolovaný preload script pro Exo Pilota
+    ├── exo-pilot.html       # Uživatelské rozhraní pro Exo Pilota
+    ├── exo-plugin-engine.js # Backend jádro pro instalaci a správu .zip pluginů
+    ├── exo-plugins.html     # UI Plugin Manageru (tržnice a správa rozšíření)
+    ├── exo-search.html      # UI pro rychlé vyhledávání (Command Palette)
+    ├── exo-search.css       # Styly vyhrazené pro vyhledávací rozhraní
+    ├── exo-settings.html    # Uživatelské rozhraní nastavení prohlížeče
+    ├── background.png       # Hlavní grafika na pozadí aplikace
+    └── icon.ico / *.png     # Balík ikon, favicon a manifestů pro build
 
 ## Architecture
 

@@ -1,6 +1,16 @@
 # Ex0 Browser
 <img width="1914" height="1029" alt="obrazek" src="https://github.com/user-attachments/assets/49325943-b0e5-4942-903b-b426c9d1c60e" />
 
+## 🚀 What's New in v1.1.0: Modular Plugin Engine
+
+Exo-Browser is no longer just a browser; it's a fully extensible platform. We've just shipped a brand-new custom Plugin Architecture!
+
+* 📦 **Drag & Drop Installation:** Installing a plugin is as easy as dragging a `.zip` file into the Plugin Manager. No manual folder digging required.
+* 🛡️ **Secure Execution:** Content scripts are cleanly injected and sandboxed, while allowing powerful API access via the `window.exo` namespace.
+* 🛠️ **Developer Friendly:** Want to build your own Spotify widget, Crypto tracker, or custom UI tweak? Check out the built-in Developer Guide inside the browser.
+
+> **Note for Builders:** The first official open-source plugin, **YouTube Enhancer** (AdBlock + timestamp memory), is already available on our Discord!
+
 # Exo-Browser 🚀
 Developed by **Ex0 Studios**
 

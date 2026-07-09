@@ -1,3 +1,5 @@
 dist/ 
 installer-output/ 
 node_modules/ 
+*.zip
+*.iss

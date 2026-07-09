@@ -129,5 +129,3 @@ Get the official compiled builds or join our dev team:
 
 This project is licensed under the **MIT License** by **Ex0 Studios**. See the full `LICENSE.txt` for details.
 <img width="1908" height="1027" alt="obrazek" src="https://github.com/user-attachments/assets/9fc73b0d-b175-4190-b712-944b81025f35" />
-
-

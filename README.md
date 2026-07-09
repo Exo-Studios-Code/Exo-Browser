@@ -42,9 +42,6 @@ npm run dev
 **Core Framework:** Electron (utilizes the modern `WebContentsView` API)
 
 ---
-
-## Project Structure
-
 ## 📂 Project Structure
 
 ```text
@@ -77,7 +74,9 @@ Exo-Browser/
 ---
 
 
+```
 ## Architecture
+
 
 ```
 ┌─────────────────────────────────────────────────────────┐

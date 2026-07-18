@@ -100,6 +100,10 @@ contextBridge.exposeInMainWorld('browserAPI', {
   enableGamingMode:  () => ipcRenderer.invoke('gaming-mode-enable'),
   disableGamingMode: () => ipcRenderer.invoke('gaming-mode-disable'),
 
+  // ── Dark Mode (Dark Reader) ───────────────────────────────────────────────────
+  /** Toggle Dark Reader across all open tabs. */
+  setDarkMode: (enabled) => ipcRenderer.send('dark-mode-set', { enabled: !!enabled }),
+
   // ── Cleanup ─────────────────────────────────────────────────────────────────
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 
@@ -262,5 +266,78 @@ contextBridge.exposeInMainWorld('browserAPI', {
    */
   aiCommand: (command) =>
     ipcRenderer.invoke('exo-pilot-command', { text: assertString(command, 'command') }),
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // ✨ NOVÉ: Password Manager / Vault API
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Uloží přihlašovací údaje do šifrovaného vaultu (OS safeStorage).
+   * Pokud pro stejný origin + username záznam existuje, přepíše ho.
+   * @param {string} origin     Plný origin, např. "https://github.com"
+   * @param {string} username
+   * @param {string} password
+   * @returns {Promise<{ ok: boolean, id?: string, error?: string }>}
+   */
+  passwordSave: (origin, username, password) =>
+    ipcRenderer.invoke('passwords-save', {
+      origin:   assertString(origin,   'origin'),
+      username: assertString(username, 'username'),
+      password: assertString(password, 'password'),
+    }),
+
+  /**
+   * Vrátí všechny záznamy pro daný origin (hesla NEJSOU součástí odpovědi).
+   * @param {string} origin
+   * @returns {Promise<SafeCredential[]>}
+   */
+  passwordGetByDomain: (origin) =>
+    ipcRenderer.invoke('passwords-get-by-domain', {
+      origin: assertString(origin, 'origin'),
+    }),
+
+  /**
+   * Vrátí všechny uložené záznamy seřazené od nejnovějšího (hesla odstraněna).
+   * @returns {Promise<SafeCredential[]>}
+   */
+  passwordGetAll: () =>
+    ipcRenderer.invoke('passwords-get-all'),
+
+  /**
+   * Smaže jeden záznam dle id.
+   * @param {string} id
+   * @returns {Promise<{ ok: boolean }>}
+   */
+  passwordDelete: (id) =>
+    ipcRenderer.invoke('passwords-delete', {
+      id: assertString(id, 'id'),
+    }),
+
+  /**
+   * Dešifruje a vrátí plaintext hesla pro daný záznam.
+   * Voláno pouze z Vault UI tlačítkem "Zobrazit heslo".
+   * @param {string} id
+   * @returns {Promise<{ password?: string, error?: string }>}
+   */
+  passwordReveal: (id) =>
+    ipcRenderer.invoke('passwords-reveal', {
+      id: assertString(id, 'id'),
+    }),
+
+  /**
+   * Naslouchá výzvě k uložení hesla z autofill enginu.
+   * Main proces ji vysílá po odeslání nového formuláře na stránce.
+   * @param {function({ origin: string, username: string, password: string }): void} cb
+   */
+  onVaultSavePrompt: (cb) =>
+    ipcRenderer.on('vault-save-prompt', (_e, d) => cb(d)),
+
+  /**
+   * Reports the vault toast bounding rect to the Main-process cursor poll.
+   * Pass null when the toast is hidden to stop the poll and restore passthrough.
+   * @param {{ x: number, y: number, w: number, h: number } | null} rect
+   */
+  setVaultToastRect: (rect) =>
+    ipcRenderer.send('vault-toast-rect', rect),
 
 });

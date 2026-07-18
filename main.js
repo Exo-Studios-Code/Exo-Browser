@@ -21,6 +21,9 @@ const { registerAgentIPC, agentEmitter } = require('./src/exo-ai-agent');
 // ── Plugin Engine ─────────────────────────────────────────────────────────────
 const { PluginEngine, registerPluginIPC } = require('./src/exo-plugin-engine');
 
+// ── Password Manager ──────────────────────────────────────────────────────────
+const { registerPasswordIPC } = require('./exo-password-manager');
+
 // ── Exo internal URL scheme helpers ──────────────────────────────────────────
 /** Local file:// URL for the New Tab page */
 const EXO_NEWTAB_FILE = path.join(__dirname, 'src', 'exo-newtab.html');
@@ -162,54 +165,28 @@ async function updateBlocklist() {
 }
 
 
-// ─── Dark Mode CSS Injection ──────────────────────────────────────────────────
-/**
- * Injected into every WebContentsView after page load.
- * Strategy: invert(1) hue-rotate(180deg) on html — classic dark mode trick.
- * Images/video/canvas are counter-inverted to restore natural colours.
- * A thin neon EXO watermark is appended via JS below.
- */
-const DARK_INJECT_CSS = `
-  html {
-    filter: invert(1) hue-rotate(180deg) !important;
-    background: #08080f !important;
-  }
-  img, video, canvas, picture, svg image,
-  [style*="background-image"], iframe {
-    filter: invert(1) hue-rotate(180deg) !important;
-  }
-  /* Restore favicon-like inline SVG icons */
-  .goog-logo-link img, [class*="logo"] img { filter: invert(1) hue-rotate(180deg) !important; }
-`;
+// ── Dark Reader Integration ────────────────────────────────────────────────────
+// Professional dark mode via Dark Reader (https://darkreader.org).
+// Replaces the old CSS invert()/hue-rotate() approach which broke on GitHub,
+// Google Docs, React/Vue/Angular apps, modern CSS variables and gradients.
+const { enableDarkMode, disableDarkMode } = require('./src/exo-dark-reader');
 
-/** JS injected into every page — adds the neon EXO corner badge */
-const DARK_INJECT_JS = `
-(function() {
-  if (document.getElementById('__exo_badge__')) return;
-  const b = document.createElement('div');
-  b.id = '__exo_badge__';
-  b.style.cssText = [
-    'position:fixed','bottom:14px','right:14px','z-index:2147483647',
-    'font:700 9px/1 -apple-system,sans-serif','letter-spacing:.22em',
-    'padding:4px 8px','border-radius:6px',
-    'background:rgba(8,8,16,.72)','backdrop-filter:blur(6px)',
-    'border:1px solid rgba(167,139,250,.35)',
-    'color:transparent',
-    'background-clip:text',
-    '-webkit-background-clip:text',
-    'background-image:linear-gradient(90deg,#a78bfa,#38bdf8,#f472b6,#a78bfa)',
-    'background-size:300% 100%',
-    'animation:__exo_flow__ 4s linear infinite',
-    'pointer-events:none','user-select:none',
-  ].join(';');
-  b.textContent = 'EXO';
-  // Inline keyframes via <style>
-  const s = document.createElement('style');
-  s.textContent = '@keyframes __exo_flow__{0%{background-position:0% 0%}100%{background-position:300% 0%}}';
-  document.head?.appendChild(s);
-  document.documentElement?.appendChild(b);
+
+// ── Autofill Content Script ───────────────────────────────────────────────────
+/**
+ * Loaded once at startup, injected into every web tab on did-stop-loading.
+ * fs.readFileSync here avoids per-tab file I/O overhead.
+ */
+const AUTOFILL_JS = (() => {
+  try {
+    return require('fs').readFileSync(
+      path.join(__dirname, 'exo-autofill.js'), 'utf8'
+    );
+  } catch (e) {
+    console.error('[Exo-Vault] Nelze načíst exo-autofill.js:', e.message);
+    return '';
+  }
 })();
-`;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -239,11 +216,17 @@ let mainWindow = null;
  * @type {BrowserWindow|null}
  */
 let overlayWindow = null;
+// Dedup: button-click + form-submit both fire on same login → suppress duplicates
+let _lastVaultPromptKey = '';
+let _lastVaultPromptAt  = 0;
 
 let sidebarOpen = false;
 let historySidebarOpen = false;
 let aiSidebarOpen   = false;   // ✨ AI Chat Sidebar
 let blockedCount = 0;   // Privacy Shield: lifetime blocked request counter
+
+/** Dark mode state — toggled via IPC 'dark-mode-set' from renderer settings */
+let darkModeEnabled = true; // on by default (matches DEFAULTS.darkMode in renderer)
 
 /** @type {BrowserWindow|null} Settings window */
 let settingsWindow  = null;
@@ -637,19 +620,161 @@ function wireTabEvents(tabId, view) {
     // Record to browsing history
     addToHistory({ url: view.webContents.getURL(), title: view.webContents.getTitle() });
     
-    // Skip dark inject on our own pages (exo-search, exo-newtab)
+    // Dark Reader — skip internal Exo pages (they have their own dark design)
     const stopUrl = view.webContents.getURL();
-    if (stopUrl.includes('exo-search.html') || stopUrl.includes('exo-newtab.html')) return;
-    try {
-      await view.webContents.insertCSS(DARK_INJECT_CSS, { cssOrigin: 'user' });
-      await view.webContents.executeJavaScript(DARK_INJECT_JS);
-    } catch (_) { /* page may have strict CSP — silently skip */ }
+    if (darkModeEnabled) {
+      await enableDarkMode(view.webContents, stopUrl);
+    }
 
     // ✨ Plugin content script injekce
     if (pluginEngine) {
       pluginEngine.injectIntoTab(view.webContents, stopUrl, tabId).catch(() => {});
     }
+
+    // ── Autofill injection ────────────────────────────────────────────────────
+    // CRITICAL FIX: Bridge and autofill script are combined into ONE atomic
+    // executeJavaScript call. The previous two-call approach had a race condition:
+    // exo-autofill.js ran init() and fired sendToMain('get-credentials') BEFORE
+    // the second executeJavaScript had registered its 'message' listener for
+    // __exo_af__ messages. The postMessage fired into the void, watchSubmissions()
+    // was never called, and no submit was ever captured.
+    //
+    // Fix: bridge code runs FIRST in the combined script, then AUTOFILL_JS is
+    // appended. By the time autofill's init() calls sendToMain(), the bridge
+    // listener is already live in the same JS execution context.
+    if (AUTOFILL_JS) {
+      try {
+        const BRIDGE_JS = `
+          (function() {
+            if (window.__exo_vault_bridge__) return;
+            window.__exo_vault_bridge__ = true;
+
+            // Outgoing queue: page → main (polled every 250ms by main process)
+            window.__exo_vault_queue__ = window.__exo_vault_queue__ || [];
+            window.addEventListener('message', (e) => {
+              if (e.data && e.data.__exo_af_main__) {
+                window.__exo_vault_queue__.push(e.data);
+              }
+            });
+
+            window.__exo_vault_get__ = (origin) => new Promise(res => {
+              window.__exo_vault_pending_get__ = res;
+              window.postMessage({ __exo_af_main__: true, type: 'vault-get', origin }, '*');
+            });
+            window.__exo_vault_reveal__ = (id) => new Promise(res => {
+              window.__exo_vault_pending_reveal__ = res;
+              window.postMessage({ __exo_af_main__: true, type: 'vault-reveal', id }, '*');
+            });
+            window.__exo_vault_save_prompt__ = (origin, username, password) => {
+              window.postMessage({ __exo_af_main__: true, type: 'vault-save-prompt', origin, username, password }, '*');
+            };
+
+            // Relay __exo_af__ postMessages from autofill script → bridge helpers
+            window.addEventListener('message', async (e) => {
+              if (!e.data || !e.data.__exo_af__) return;
+              const { type, payload } = e.data;
+              if (type === 'get-credentials') {
+                const creds = await window.__exo_vault_get__(payload.origin);
+                window.__exo_vault_creds_cache__ = creds || [];
+                if (typeof window.__exo_af_response__ === 'function')
+                  window.__exo_af_response__('credentials', { creds: creds || [] });
+              }
+              if (type === 'autofill-request') {
+                const result = await window.__exo_vault_reveal__(payload.id);
+                const username = (window.__exo_vault_creds_cache__ || [])
+                  .find(c => c.id === payload.id)?.username ?? '';
+                if (result && typeof window.__exo_af_response__ === 'function')
+                  window.__exo_af_response__('autofill-fill', { username, password: result.password });
+              }
+              if (type === 'password-save-prompt') {
+                // Use the direct IPC path (exo-tab-preload.js) — reliable even
+                // during page navigation when executeJavaScript-based poll fails.
+                if (typeof window.__exo_tab__?.vaultSave === 'function') {
+                  window.__exo_tab__.vaultSave(payload.origin, payload.username, payload.password);
+                } else {
+                  // Fallback: double-postMessage queue path (SPA logins that don't navigate)
+                  window.__exo_vault_save_prompt__(payload.origin, payload.username, payload.password);
+                }
+              }
+            });
+
+            console.log('✅ [Exo-Bridge] Vault bridge installed');
+          })();
+        `;
+
+        // Single atomic injection: bridge runs first, autofill appended after.
+        await view.webContents.executeJavaScript(BRIDGE_JS + '\n' + AUTOFILL_JS);
+      } catch (err) { console.error('[Exo] Autofill inject error:', err.message); }
+    }
   });
+
+  // ── Vault ↔ content-script message relay (polled every 250 ms) ─────────────
+  // The page has no contextBridge, so the autofill script uses window.postMessage.
+  // We drain a shared queue from here and call vault methods directly.
+  {
+    let _pollTimer = null;
+
+    const startPoll = () => {
+      _pollTimer = setInterval(async () => {
+        if (!view.webContents || view.webContents.isDestroyed()) {
+          clearInterval(_pollTimer); return;
+        }
+        let msgs;
+        try {
+          msgs = await view.webContents.executeJavaScript(
+            `(window.__exo_vault_queue__ || []).splice(0)`
+          );
+        } catch (_) { clearInterval(_pollTimer); return; }
+
+        for (const msg of (msgs || [])) {
+          await handleVaultMessage(msg, view.webContents);
+        }
+      }, 250);
+    };
+
+    view.webContents.on('did-finish-load', () => {
+      clearInterval(_pollTimer);
+      if (AUTOFILL_JS) startPoll();
+    });
+
+    // ── Pre-navigation drain ────────────────────────────────────────────────
+    // Traditional <form> POSTs navigate immediately after the submit event,
+    // which fires did-start-loading before the next 250ms poll tick.
+    // We do one final drain + check the dedicated pending slot BEFORE we
+    // kill the poll timer, so save-prompts from native form submits aren't lost.
+    view.webContents.on('did-start-loading', async () => {
+      // 1. Drain any queued vault messages first
+      if (AUTOFILL_JS && !view.webContents.isDestroyed()) {
+        try {
+          const msgs = await view.webContents.executeJavaScript(
+            `(window.__exo_vault_queue__ || []).splice(0)`
+          );
+          for (const msg of (msgs || [])) {
+            await handleVaultMessage(msg, view.webContents);
+          }
+        } catch (_) {}
+
+        // 2. Also check the dedicated save-pending slot (written synchronously
+        //    by exo-autofill.js in the submit capture handler)
+        try {
+          const pending = await view.webContents.executeJavaScript(
+            `(function(){ var p = window.__exo_vault_save_pending__; window.__exo_vault_save_pending__ = null; return p || null; })()`
+          );
+          if (pending && pending.type !== 'consumed') {
+            console.log('📡 [Main] Pre-navigation save-pending slot flushed:', pending.origin, pending.username);
+            await handleVaultMessage(
+              { type: 'vault-save-prompt', origin: pending.origin, username: pending.username, password: pending.password },
+              view.webContents
+            );
+          }
+        } catch (_) {}
+      }
+
+      clearInterval(_pollTimer);
+    });
+
+    view.webContents.on('destroyed', () => clearInterval(_pollTimer));
+  }
 
   view.webContents.on('did-navigate', (_e, navUrl) => {
     safeTabUpdate(tabId, { url: navUrl });
@@ -770,7 +895,8 @@ function createTab(url = EXO_NEWTAB_URL) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,   // must be false to allow preload (contextIsolation still enforced)
+      preload: path.join(__dirname, 'exo-tab-preload.js'),
     },
   });
 
@@ -890,7 +1016,8 @@ function wakeTab(tabId) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false, // must be false to allow preload (contextIsolation still enforced)
+      preload: path.join(__dirname, 'exo-tab-preload.js'),
     },
   });
 
@@ -1054,6 +1181,23 @@ ipcMain.on('history-sidebar-toggle', (_e, { open }) => {
 ipcMain.on('open-settings',  () => createSettingsWindow());
 ipcMain.on('close-settings', () => settingsWindow?.close());
 
+// ── Dark Mode toggle ──────────────────────────────────────────────────────────
+// Renderer sends 'dark-mode-set' { enabled: bool } when the user flips the
+// Dark Mode toggle in the GX sidebar settings panel.
+// We apply the change to every currently open tab immediately.
+ipcMain.on('dark-mode-set', (_e, { enabled }) => {
+  darkModeEnabled = !!enabled;
+  tabs.forEach((tab) => {
+    if (!tab.view || tab.sleeping) return;
+    if (darkModeEnabled) {
+      enableDarkMode(tab.view.webContents).catch(() => {});
+    } else {
+      disableDarkMode(tab.view.webContents).catch(() => {});
+    }
+  });
+  console.log(`[Exo-Dark] Dark mode ${darkModeEnabled ? 'zapnut' : 'vypnut'} (${tabs.size} tabů).`);
+});
+
 // ── Plugin Manager ────────────────────────────────────────────────────────────
 ipcMain.on('open-plugin-manager',  () => createPluginManagerWindow());
 ipcMain.on('close-plugin-manager', () => pluginManagerWindow?.close());
@@ -1172,6 +1316,32 @@ app.whenReady().then(() => {
   );
   pluginEngine.loadAll();
   registerPluginIPC(pluginEngine, mainWindow);
+
+  // ── Password Manager IPC ────────────────────────────────────────────────────
+  registerPasswordIPC(ipcMain, app.getPath('userData'));
+
+  // ── Vault save-prompt: direct IPC from tab preload (reliable during nav) ────
+  // The autofill bridge calls window.__exo_tab__.vaultSave() which uses
+  // ipcRenderer.send('vault-save-prompt-ipc') from exo-tab-preload.js.
+  // This fires synchronously even when the page is navigating away, unlike
+  // executeJavaScript which fails on navigating webContents.
+  ipcMain.on('vault-save-prompt-ipc', (_e, { origin, username, password }) => {
+    const key = `${origin}|${username}`;
+    const now = Date.now();
+    if (key === _lastVaultPromptKey && now - _lastVaultPromptAt < 1000) {
+      console.log('📡 [Main] vault-save-prompt-ipc deduplicated');
+      return;
+    }
+    _lastVaultPromptKey = key;
+    _lastVaultPromptAt  = now;
+    console.log('📡 [Main] SUCCESSFULLY RECEIVED PROMPT FROM BRIDGE:', { origin, username });
+    const promptPayload = { origin, username, password };
+    mainWindow?.webContents.send('vault-save-prompt', promptPayload);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      console.log('📡 [Main] Injecting vault toast into overlayWindow...');
+      _injectVaultToast(overlayWindow, promptPayload);
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1317,6 +1487,252 @@ ipcMain.handle('exo-search', async (_e, { query, tabId }) => {
 
   return { ok: true };
 });
+
+// ── Vault ↔ content-script message handler ────────────────────────────────────
+/**
+ * Called by the per-tab postMessage relay poll (inside createTab).
+ * Processes outgoing vault requests from the autofill content script and
+ * responds by calling back into the page via executeJavaScript.
+ *
+ * @param {{ type: string, [key: string]: any }} msg
+ * @param {Electron.WebContents}               wc
+ */
+/**
+ * Inject the "Uložit heslo?" toast into the overlay window via executeJavaScript.
+ * The overlay is an alwaysOnTop BrowserWindow that paints above all WebContentsViews.
+ * Called both from handleVaultMessage (poll path) and vault-save-prompt-ipc (preload path).
+ * @param {Electron.BrowserWindow} win   the overlayWindow
+ * @param {{ origin, username, password }} payload
+ */
+// ── Vault toast cursor poll ───────────────────────────────────────────────────
+// Tracks whether the cursor is over the toast rect (reported by the renderer).
+// Used by the Main-process cursor poll to toggle setIgnoreMouseEvents.
+let _vaultToastRect   = null; // { x, y, w, h } in overlay-window client coords
+let _vaultToastActive = false;
+let _vaultCursorPoll  = null;
+
+function _startVaultCursorPoll(win) {
+  if (_vaultCursorPoll) return; // already running
+  const { screen } = require('electron');
+  _vaultCursorPoll = setInterval(() => {
+    if (!win || win.isDestroyed() || !_vaultToastActive) {
+      _stopVaultCursorPoll(win);
+      return;
+    }
+    const cursor  = screen.getCursorScreenPoint();
+    const bounds  = win.getBounds();
+    // Convert screen coords → overlay-window client coords
+    const cx = cursor.x - bounds.x;
+    const cy = cursor.y - bounds.y;
+    const r  = _vaultToastRect;
+    const over = r && cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h;
+    win.setIgnoreMouseEvents(!over, { forward: true });
+  }, 16); // ~60 fps
+}
+
+function _stopVaultCursorPoll(win) {
+  if (_vaultCursorPoll) { clearInterval(_vaultCursorPoll); _vaultCursorPoll = null; }
+  if (win && !win.isDestroyed()) win.setIgnoreMouseEvents(true, { forward: true });
+}
+
+// Renderer reports the toast rect and active state via IPC
+ipcMain.on('vault-toast-rect', (_e, rect) => {
+  _vaultToastRect   = rect; // { x, y, w, h } or null when hidden
+  _vaultToastActive = !!rect;
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    if (_vaultToastActive) {
+      _startVaultCursorPoll(overlayWindow);
+    } else {
+      _stopVaultCursorPoll(overlayWindow);
+    }
+  }
+});
+
+function _injectVaultToast(win, payload) {
+  if (!win || win.isDestroyed()) return;
+  // Start Main-process cursor poll — toggles setIgnoreMouseEvents based on
+  // whether the cursor is over the toast rect (reported via vault-toast-rect IPC).
+  _startVaultCursorPoll(win);
+  const safePayload = JSON.stringify(payload);
+  win.webContents.executeJavaScript(`
+    (function(payload) {
+      // Idempotent — only inject once; on repeat calls just update + show
+      if (document.getElementById('__exo_vault_overlay_toast__')) {
+        document.getElementById('__exo_ovt_sub__').textContent =
+          (payload.username || '') + ' — ' + (payload.origin || '');
+        document.getElementById('__exo_vault_overlay_toast__').__pendingPayload = payload;
+        document.getElementById('__exo_vault_overlay_toast__').classList.add('show');
+        // Re-report rect so poll knows toast is active again after re-show
+        requestAnimationFrame(() => {
+          const r2 = document.getElementById('__exo_vault_overlay_toast__').getBoundingClientRect();
+          window.browserAPI?.setVaultToastRect({ x: Math.round(r2.left), y: Math.round(r2.top), w: Math.round(r2.width), h: Math.round(r2.height) });
+        });
+        return;
+      }
+
+      // ── Styles ────────────────────────────────────────────────────────────
+      const s = document.createElement('style');
+      s.textContent = \`
+        #__exo_vault_overlay_toast__ {
+          position: fixed; bottom: 20px; left: 50%;
+          transform: translateX(-50%) translateY(140%);
+          z-index: 2147483647;
+          background: rgba(14,14,26,0.97);
+          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(167,139,250,0.4); border-radius: 14px;
+          box-shadow: 0 12px 48px rgba(0,0,0,.75);
+          padding: 14px 18px; min-width: 320px; max-width: 460px;
+          display: flex; align-items: flex-start; gap: 12px;
+          transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+          opacity: 0; font-family: -apple-system,"Segoe UI",sans-serif;
+          pointer-events: auto;
+        }
+        #__exo_vault_overlay_toast__.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #__exo_vault_overlay_toast__ .__ovt_icon { font-size:22px; flex-shrink:0; margin-top:2px; }
+        #__exo_vault_overlay_toast__ .__ovt_body { flex:1; min-width:0; }
+        #__exo_vault_overlay_toast__ .__ovt_title { font-size:13px; font-weight:600; color:#e2e8f0; margin-bottom:3px; }
+        #__exo_vault_overlay_toast__ .__ovt_sub   { font-size:12px; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #__exo_vault_overlay_toast__ .__ovt_acts  { display:flex; gap:8px; margin-top:10px; }
+        #__exo_vault_overlay_toast__ .__ovt_btn   { border:none; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; padding:5px 12px; transition:background .12s; }
+        #__exo_vault_overlay_toast__ .__ovt_save  { background:rgba(167,139,250,.18); color:#a78bfa; border:1px solid rgba(167,139,250,.35); }
+        #__exo_vault_overlay_toast__ .__ovt_save:hover { background:rgba(167,139,250,.3); }
+        #__exo_vault_overlay_toast__ .__ovt_skip  { background:rgba(255,255,255,.04); color:#64748b; border:1px solid rgba(255,255,255,.08); }
+        #__exo_vault_overlay_toast__ .__ovt_skip:hover { background:rgba(255,255,255,.09); color:#94a3b8; }
+        #__exo_vault_overlay_toast__ .__ovt_x     { background:none; border:none; color:#475569; font-size:16px; cursor:pointer; padding:0; line-height:1; align-self:flex-start; flex-shrink:0; }
+        #__exo_vault_overlay_toast__ .__ovt_x:hover { color:#94a3b8; }
+      \`;
+      document.head.appendChild(s);
+
+      // ── DOM ───────────────────────────────────────────────────────────────
+      const el = document.createElement('div');
+      el.id = '__exo_vault_overlay_toast__';
+      el.__pendingPayload = payload;
+      el.innerHTML = \`
+        <div class="__ovt_icon">🔐</div>
+        <div class="__ovt_body">
+          <div class="__ovt_title">Uložit heslo?</div>
+          <div class="__ovt_sub" id="__exo_ovt_sub__"></div>
+          <div class="__ovt_acts">
+            <button class="__ovt_btn __ovt_save" id="__exo_ovt_save__">✓ Uložit</button>
+            <button class="__ovt_btn __ovt_skip" id="__exo_ovt_skip__">✕ Ignorovat</button>
+          </div>
+        </div>
+        <button class="__ovt_x" id="__exo_ovt_close__">✕</button>
+      \`;
+      document.body.appendChild(el);
+      document.getElementById('__exo_ovt_sub__').textContent =
+        (payload.username || '') + ' — ' + (payload.origin || '');
+
+      const hide = () => {
+        el.classList.remove('show');
+        // Tell Main-process cursor poll that toast is gone → restores passthrough
+        window.browserAPI?.setVaultToastRect(null);
+      };
+
+      // ── Auto-dismiss timer ───────────────────────────────────────────────────
+      // Mouse events are managed entirely by the Main-process cursor poll
+      // (16ms interval, screen.getCursorScreenPoint() vs toast rect).
+      // mouseenter/mouseleave work here because the poll keeps the overlay
+      // non-passthrough while the cursor is over the rect.
+      let _autoDismissTimer = setTimeout(hide, 12000);
+
+      // Pause auto-dismiss while cursor is over the toast; restart on leave.
+      el.addEventListener('mouseenter', () => clearTimeout(_autoDismissTimer));
+      el.addEventListener('mouseleave', () => {
+        _autoDismissTimer = setTimeout(hide, 4000);
+      });
+
+      document.getElementById('__exo_ovt_skip__').addEventListener('click', hide);
+      document.getElementById('__exo_ovt_close__').addEventListener('click', hide);
+      document.getElementById('__exo_ovt_save__').addEventListener('click', async () => {
+        const p = el.__pendingPayload;
+        if (!p) return;
+        hide();
+        if (!window.browserAPI?.passwordSave) {
+          console.error('[VaultToast] browserAPI.passwordSave not available');
+          return;
+        }
+        try {
+          const res = await window.browserAPI.passwordSave(p.origin, p.username, p.password);
+          console.log('[VaultToast] passwordSave result:', res);
+          if (res?.ok) {
+            const ack = document.createElement('div');
+            ack.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2147483647;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);border-radius:8px;padding:8px 18px;color:#4ade80;font:600 13px/1.4 -apple-system,sans-serif;pointer-events:none;transition:opacity .4s;';
+            ack.textContent = '✅ Heslo uloženo do Exo Vault.';
+            document.body.appendChild(ack);
+            setTimeout(() => { ack.style.opacity = '0'; setTimeout(() => ack.remove(), 400); }, 2500);
+          } else {
+            console.error('[VaultToast] Save failed:', res?.error);
+          }
+        } catch (err) {
+          console.error('[VaultToast] passwordSave threw:', err);
+        }
+      });
+
+      // After CSS transition settles, report rect to Main cursor poll
+      requestAnimationFrame(() => {
+        el.classList.add('show');
+        // Wait for transition to finish (~350ms) before locking in the rect
+        setTimeout(() => {
+          const r = el.getBoundingClientRect();
+          window.browserAPI?.setVaultToastRect({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) });
+        }, 380);
+      });
+    })(${safePayload})
+  `).catch(err => console.error('[Main] Vault toast inject error:', err));
+}
+
+async function handleVaultMessage(msg, wc) {
+  if (!msg || !msg.type || wc.isDestroyed()) return;
+
+  const pm = require('./exo-password-manager');
+  const vlt = pm._vault;
+  if (!vlt) return; // vault not yet initialised (shouldn't happen)
+
+  if (msg.type === 'vault-get') {
+    // Return saved credentials (passwords redacted) for this origin
+    const creds = vlt.getByDomain(msg.origin || '');
+    try {
+      await wc.executeJavaScript(
+        `typeof window.__exo_vault_pending_get__ === 'function' && ` +
+        `(window.__exo_vault_pending_get__(${JSON.stringify(creds)}), ` +
+        ` window.__exo_vault_pending_get__ = null)`
+      );
+    } catch (_) {}
+    return;
+  }
+
+  if (msg.type === 'vault-reveal') {
+    // Decrypt and return the plaintext password for autofill
+    const result = vlt.reveal(msg.id || '');
+    try {
+      await wc.executeJavaScript(
+        `typeof window.__exo_vault_pending_reveal__ === 'function' && ` +
+        `(window.__exo_vault_pending_reveal__(${JSON.stringify(result)}), ` +
+        ` window.__exo_vault_pending_reveal__ = null)`
+      );
+    } catch (_) {}
+    return;
+  }
+
+  if (msg.type === 'vault-save-prompt') {
+    const key = `${msg.origin}|${msg.username}`;
+    const now = Date.now();
+    if (key === _lastVaultPromptKey && now - _lastVaultPromptAt < 1000) {
+      console.log('📡 [Main] vault-save-prompt (poll) deduplicated');
+      return;
+    }
+    _lastVaultPromptKey = key;
+    _lastVaultPromptAt  = now;
+    console.log('📡 [Main] Forwarding vault prompt to UI...', msg.origin, msg.username);
+    const promptPayload = { origin: msg.origin, username: msg.username, password: msg.password };
+    mainWindow?.webContents.send('vault-save-prompt', promptPayload);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      console.log('📡 [Main] Injecting vault toast into overlayWindow...');
+      _injectVaultToast(overlayWindow, promptPayload);
+    }
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

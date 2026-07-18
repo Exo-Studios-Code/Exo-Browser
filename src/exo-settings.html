@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self' 'unsafe-inline'; img-src 'self' data: https:;" />
-  <title>Exo Nastavení</title>
+  <title>Exo Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -196,6 +196,39 @@
     #toast.ok   { color: var(--green); border-color: rgba(74,222,128,.3); }
     #toast.err  { color: var(--red);   border-color: rgba(248,113,113,.3); }
 
+    /* ── Vault table ──────────────────────────────────────────────────────── */
+    #vault-list {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    #vault-list th {
+      text-align: left;
+      color: var(--text-dim);
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 4px 8px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    #vault-list td {
+      padding: 8px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      color: var(--text);
+      vertical-align: middle;
+      word-break: break-all;
+    }
+    #vault-list tr:last-child td { border-bottom: none; }
+    #vault-list tr:hover td { background: rgba(255,255,255,.03); }
+    .vault-pw-cell { font-family: monospace; letter-spacing: .08em; color: var(--text-dim); }
+    .vault-reveal  { background: none; border: none; color: var(--accent2); cursor: pointer;
+                     font-size: 11px; padding: 0 4px; opacity: .8; }
+    .vault-reveal:hover { opacity: 1; }
+    .vault-empty   { color: var(--text-dim); font-size: 13px; padding: 16px 0; text-align: center; }
+    .vault-date    { font-size: 11px; color: var(--text-dim); }
+
     /* ── Info text ───────────────────────────────────────────────── */
     .info {
       font-size: 12px;
@@ -253,12 +286,12 @@
 
   <!-- Titlebar -->
   <div id="titlebar">
-    <svg viewBox="0 0 16 16" fill="none" width="14">
-      <circle cx="8" cy="8" r="6.5" stroke="#a78bfa" stroke-width="1.3"/>
-      <path d="M5.5 8h5M8 5.5v5" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round"/>
+    <svg viewBox="0 0 16 16" fill="none" width="14" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1h3l.4 1.6a4.5 4.5 0 0 1 1.1.64l1.56-.52 1.5 2.6-1.2 1.06a4.6 4.6 0 0 1 0 1.28l1.2 1.06-1.5 2.6-1.56-.52a4.5 4.5 0 0 1-1.1.64L9.5 15h-3l-.4-1.6a4.5 4.5 0 0 1-1.1-.64l-1.56.52-1.5-2.6 1.2-1.06a4.6 4.6 0 0 1 0-1.28L1.94 7.28l1.5-2.6 1.56.52A4.5 4.5 0 0 1 6.1 2.6L6.5 1Z" stroke="#a78bfa" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle cx="8" cy="8" r="2" stroke="#a78bfa" stroke-width="1.2"/>
     </svg>
-    <span id="titlebar-title">NASTAVENÍ EXO</span>
-    <button id="btn-settings-close" title="Zavřít nastavení" aria-label="Zavřít">
+    <span id="titlebar-title">EXO SETTINGS</span>
+    <button id="btn-settings-close" title="Close settings" aria-label="Close">
       <svg viewBox="0 0 10 10" width="10" fill="none">
         <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
@@ -273,20 +306,20 @@
 
     <div class="card">
       <div class="row">
-        <label>Status klíče</label>
-        <span id="key-status" class="status-none">Nenastaveno</span>
-        <button class="btn btn-neutral" id="btn-test-key" style="margin-left:auto">Otestovat</button>
+        <label>API Key Status</label>
+        <span id="key-status" class="status-none">Not configured</span>
+        <button class="btn btn-neutral" id="btn-test-key" style="margin-left:auto">Test</button>
       </div>
 
       <hr class="divider">
 
       <div class="row">
-        <label for="input-api-key">Gemini API klíč</label>
+        <label for="input-api-key">Gemini API Key</label>
         <input type="password" id="input-api-key" placeholder="AIza…" autocomplete="off" spellcheck="false" />
       </div>
       <div class="row" style="justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-danger" id="btn-delete-key">Smazat klíč</button>
-        <button class="btn btn-primary" id="btn-save-key">Uložit klíč</button>
+        <button class="btn btn-danger" id="btn-delete-key">Delete Key</button>
+        <button class="btn btn-primary" id="btn-save-key">Save Key</button>
       </div>
 
       <hr class="divider">
@@ -294,29 +327,29 @@
       <div class="row">
         <label for="select-model">Model</label>
         <select id="select-model">
-          <option value="gemini-2.5-flash">Gemini 2.5 Flash (rychlý, doporučený)</option>
-          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (nejrychlejší, nejlevnější)</option>
-          <option value="gemini-2.5-pro">Gemini 2.5 Pro (výkonnější, pomalejší)</option>
-          <option value="gemini-3.5-flash">Gemini 3.5 Flash (vlajkový, multimodální)</option>
-          <option value="gemini-3.5-pro">Gemini 3.5 Pro (nejpokročilejší)</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash (fast, recommended)</option>
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (fastest, cheapest)</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro (more capable, slower)</option>
+          <option value="gemini-3.5-flash">Gemini 3.5 Flash (flagship, multimodal)</option>
+          <option value="gemini-3.5-pro">Gemini 3.5 Pro (most advanced)</option>
         </select>
       </div>
 
       <p class="info">
-        API klíč získáš zdarma na
+        Get a free API key at
         <a href="#" id="link-aistudio">Google AI Studio (aistudio.google.com)</a>.
-        Klíč je uložen bezpečně pomocí OS šifrování (Electron safeStorage).
+        The key is stored securely using OS-level encryption (Electron safeStorage).
       </p>
     </div>
 
-    <!-- ══ Funkce ════════════════════════════════════════════════ -->
-    <h2>⚙ Funkce</h2>
+    <!-- ══ Features ════════════════════════════════════════════════ -->
+    <h2>⚙ Features</h2>
 
     <div class="card">
       <div class="toggle-row">
         <div>
           <div class="toggle-label">AI Chat Sidebar</div>
-          <div class="toggle-desc">Zobrazit AI chat panel v pravém sidebaru</div>
+          <div class="toggle-desc">Show the AI chat panel in the right sidebar</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-ai-sidebar" checked />
@@ -329,7 +362,7 @@
       <div class="toggle-row">
         <div>
           <div class="toggle-label">Smart Command Bar</div>
-          <div class="toggle-desc">Ctrl+Space otevře AI command bar pro rychlé akce</div>
+          <div class="toggle-desc">Ctrl+Space opens the AI command bar for quick actions</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-cmd-bar" checked />
@@ -341,8 +374,8 @@
 
       <div class="toggle-row">
         <div>
-          <div class="toggle-label">Auto-sumarizace</div>
-          <div class="toggle-desc">Nabídnout sumarizaci při přechodu na článek</div>
+          <div class="toggle-label">Auto-Summarize</div>
+          <div class="toggle-desc">Offer to summarize articles when navigating to them</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-auto-summarize" />
@@ -351,8 +384,47 @@
       </div>
     </div>
 
-    <!-- ══ O prohlížeči ═════════════════════════════════════════ -->
-    <h2>ℹ O prohlížeči</h2>
+    <!-- ══ Password Manager / Vault ══════════════════════════════════ -->
+    <h2>🔐 Password Manager (Vault)</h2>
+
+    <div class="card" id="vault-card">
+
+      <!-- Toolbar row -->
+      <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+        <span id="vault-count" style="color:var(--text-dim);font-size:13px;">Loading…</span>
+        <button class="btn btn-neutral" id="btn-vault-refresh" style="margin-left:auto" title="Refresh list">
+          ↺ Refresh
+        </button>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Credentials table -->
+      <div style="overflow-x:auto;">
+        <table id="vault-list">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Username</th>
+              <th>Password</th>
+              <th>Saved</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="vault-tbody">
+            <tr><td colspan="5" class="vault-empty">No saved passwords.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="info" style="margin-top:12px;">
+        Passwords are encrypted using the OS keychain (Electron safeStorage / DPAPI on Windows).
+        They never leave this machine.
+      </p>
+    </div>
+
+    <!-- ══ About ═════════════════════════════════════════════════ -->
+    <h2>ℹ About</h2>
 
     <div class="card">
       <div class="row" style="gap:8px; flex-wrap: wrap;">
@@ -371,7 +443,7 @@
     'use strict';
 
     const api = window.browserAPI;
-    if (!api) console.error('[Exo-Settings] browserAPI nedostupné');
+    if (!api) console.error('[Exo-Settings] browserAPI unavailable');
 
     // ─── DOM ─────────────────────────────────────────────────────
     const keyStatus   = document.getElementById('key-status');
@@ -401,13 +473,13 @@
     // ─── Status helper ────────────────────────────────────────────
     function setKeyStatus(hasKey, error = false) {
       if (error) {
-        keyStatus.textContent = 'Chyba';
+        keyStatus.textContent = 'Error';
         keyStatus.className   = 'status-error';
       } else if (hasKey) {
-        keyStatus.textContent = 'Nastaveno ✓';
+        keyStatus.textContent = 'Configured ✓';
         keyStatus.className   = 'status-ok';
       } else {
-        keyStatus.textContent = 'Nenastaveno';
+        keyStatus.textContent = 'Not configured';
         keyStatus.className   = 'status-none';
       }
     }
@@ -429,31 +501,31 @@
     // ─── Save API key ─────────────────────────────────────────────
     btnSaveKey.addEventListener('click', async () => {
       const key = inputApiKey.value.trim();
-      if (!key) { showToast('Zadej API klíč.', 'err'); return; }
+      if (!key) { showToast('Please enter an API key.', 'err'); return; }
       try {
         const res = await api.aiSetApiKey(key);
         if (res.ok) {
           setKeyStatus(true);
           inputApiKey.value = '';
-          showToast('API klíč uložen ✓');
+          showToast('API key saved ✓');
         } else {
-          showToast(res.error || 'Chyba při ukládání.', 'err');
+          showToast(res.error || 'Failed to save key.', 'err');
         }
       } catch (err) {
-        showToast('Chyba: ' + err.message, 'err');
+        showToast('Error: ' + err.message, 'err');
       }
     });
 
     // ─── Delete API key ───────────────────────────────────────────
     btnDeleteKey.addEventListener('click', async () => {
-      if (!confirm('Opravdu smazat API klíč?')) return;
+      if (!confirm('Delete the API key?')) return;
       try {
         await api.aiDeleteApiKey();
         setKeyStatus(false);
         inputApiKey.value = '';
-        showToast('API klíč smazán.');
+        showToast('API key deleted.');
       } catch (err) {
-        showToast('Chyba: ' + err.message, 'err');
+        showToast('Error: ' + err.message, 'err');
       }
     });
 
@@ -465,15 +537,15 @@
         const res = await api.aiTestKey();
         if (res.ok) {
           setKeyStatus(true);
-          showToast(`Klíč funkční ✓ (${res.model})`);
+          showToast(`Key valid ✓ (${res.model})`);
         } else {
           setKeyStatus(false, true);
-          showToast('Chyba: ' + (res.error || 'Neplatný klíč'), 'err');
+          showToast('Error: ' + (res.error || 'Invalid key'), 'err');
         }
       } catch (err) {
-        showToast('Chyba spojení: ' + err.message, 'err');
+        showToast('Connection error: ' + err.message, 'err');
       }
-      btnTestKey.textContent = 'Otestovat';
+      btnTestKey.textContent = 'Test';
       btnTestKey.disabled    = false;
     });
 
@@ -481,7 +553,7 @@
     selectModel.addEventListener('change', async () => {
       try {
         await api.aiSetModel(selectModel.value);
-        showToast('Model uložen ✓');
+        showToast('Model saved ✓');
       } catch (_) {}
     });
 
@@ -512,6 +584,120 @@
 
     // ─── Init ─────────────────────────────────────────────────────
     loadConfig();
+
+    // ─── Vault section ───────────────────────────────────────────────────────────
+
+    const vaultTbody      = document.getElementById('vault-tbody');
+    const vaultCount      = document.getElementById('vault-count');
+    const btnVaultRefresh = document.getElementById('btn-vault-refresh');
+
+    /** Format epoch ms → "DD/MM/YYYY" */
+    function fmtDate(ms) {
+      if (!ms) return '—';
+      const d = new Date(ms);
+      return d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' });
+    }
+
+    /** Reload and render the vault table */
+    async function loadVault() {
+      vaultCount.textContent = 'Loading…';
+      vaultTbody.innerHTML = '';
+
+      let creds = [];
+      try {
+        creds = await api.passwordGetAll();
+      } catch (e) {
+        vaultCount.textContent = 'Failed to load passwords.';
+        return;
+      }
+
+      vaultCount.textContent = creds.length
+        ? `${creds.length} password${creds.length === 1 ? '' : 's'} stored`
+        : 'No passwords.';
+
+      if (creds.length === 0) {
+        vaultTbody.innerHTML = '<tr><td colspan="5" class="vault-empty">No saved passwords.</td></tr>';
+        return;
+      }
+
+      for (const cred of creds) {
+        const tr = document.createElement('tr');
+
+        // Domain
+        const tdOrigin = document.createElement('td');
+        try {
+          tdOrigin.textContent = new URL(cred.origin).hostname;
+        } catch { tdOrigin.textContent = cred.origin; }
+        tdOrigin.title = cred.origin;
+
+        // Username
+        const tdUser = document.createElement('td');
+        tdUser.textContent = cred.username;
+
+        // Password (masked) + reveal
+        const tdPw = document.createElement('td');
+        tdPw.className = 'vault-pw-cell';
+        const pwSpan = document.createElement('span');
+        pwSpan.textContent = '••••••••';
+        const revealBtn = document.createElement('button');
+        revealBtn.className = 'vault-reveal';
+        revealBtn.textContent = '👁 Show';
+        revealBtn.addEventListener('click', async () => {
+          if (revealBtn.dataset.revealed === '1') {
+            pwSpan.textContent = '••••••••';
+            revealBtn.textContent = '👁 Show';
+            revealBtn.dataset.revealed = '0';
+            return;
+          }
+          revealBtn.textContent = '…';
+          const res = await api.passwordReveal(cred.id);
+          if (res.error) {
+            showToast(res.error, 'err');
+            revealBtn.textContent = '👁 Show';
+          } else {
+            pwSpan.textContent = res.password;
+            revealBtn.textContent = '🙈 Hide';
+            revealBtn.dataset.revealed = '1';
+          }
+        });
+        tdPw.appendChild(pwSpan);
+        tdPw.appendChild(document.createTextNode(' '));
+        tdPw.appendChild(revealBtn);
+
+        // Date
+        const tdDate = document.createElement('td');
+        tdDate.className = 'vault-date';
+        tdDate.textContent = fmtDate(cred.dateCreated);
+
+        // Delete
+        const tdDel = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-danger';
+        delBtn.style.cssText = 'padding:3px 8px;font-size:11px;';
+        delBtn.textContent = '🗑';
+        delBtn.title = `Delete password for ${cred.username}`;
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`Delete the password for "${cred.username}" on ${cred.origin}?`)) return;
+          const res = await api.passwordDelete(cred.id);
+          if (res.ok) {
+            showToast('Password deleted.', 'ok');
+            loadVault();
+          } else {
+            showToast('Failed to delete password.', 'err');
+          }
+        });
+        tdDel.appendChild(delBtn);
+
+        tr.append(tdOrigin, tdUser, tdPw, tdDate, tdDel);
+        vaultTbody.appendChild(tr);
+      }
+    }
+
+    // Auto-load when settings window opens
+    loadVault();
+
+    // Refresh button
+    btnVaultRefresh.addEventListener('click', loadVault);
   </script>
 </body>
 </html>

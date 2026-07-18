@@ -564,7 +564,7 @@ function renderSettings() {
       </div>
     </div>
     <div class="gx-setting-row">
-      <label class="gx-setting-label">Dark mode inject</label>
+      <label class="gx-setting-label">Dark Reader</label>
       <label class="gx-toggle"><input type="checkbox" id="tog-dark" ${S.darkMode?'checked':''}><span class="gx-toggle-track"><span class="gx-toggle-thumb"></span></span></label>
     </div>
     <div class="gx-setting-row">
@@ -593,7 +593,12 @@ function renderSettings() {
   const sls = document.getElementById('sl-sleep'), svs = document.getElementById('sv-sleep');
   sls?.addEventListener('input', () => { S.sleepMin=+sls.value; if(svs)svs.textContent=`${S.sleepMin}m`; saveS(); });
   // Toggles
-  document.getElementById('tog-dark')?.addEventListener('change', e => { S.darkMode=e.target.checked; saveS(); });
+  document.getElementById('tog-dark')?.addEventListener('change', e => {
+    S.darkMode = e.target.checked;
+    saveS();
+    // Notify main process — applies Dark Reader to all open tabs immediately
+    api.setDarkMode(S.darkMode);
+  });
   document.getElementById('tog-fps')?.addEventListener('change', e => {
     S.showFps=e.target.checked; saveS();
     const c = document.getElementById('gx-fps-card'); if(c) c.style.display=S.showFps?'':'none';
@@ -962,6 +967,7 @@ function dayLabel(d) {
   });
 })();
 
+
 // ════════════════════════════════════════════════════════════════════════════
 // ✨ PLUGIN MANAGER Button
 // ════════════════════════════════════════════════════════════════════════════
@@ -1017,4 +1023,205 @@ function dayLabel(d) {
       navActions.insertBefore(b, btnPlugins);
     });
   }
+})();
+// ─── Save-password prompt toast ───────────────────────────────────────────────
+
+(function initVaultSaveToast() {
+  'use strict';
+
+  function _init() {
+
+  // ── Inject toast CSS once ────────────────────────────────────────────────────
+  const TOAST_STYLE = `
+    #exo-vault-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      z-index: 2147483647;
+      background: rgba(14, 14, 26, 0.97);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      border-radius: 14px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.7);
+      padding: 14px 18px;
+      min-width: 340px;
+      max-width: 480px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+      opacity: 0;
+      font-family: -apple-system, "Segoe UI", sans-serif;
+    }
+    #exo-vault-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    #exo-vault-toast .vault-toast-icon {
+      font-size: 22px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    #exo-vault-toast .vault-toast-body {
+      flex: 1;
+      min-width: 0;
+    }
+    #exo-vault-toast .vault-toast-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 2px;
+    }
+    #exo-vault-toast .vault-toast-sub {
+      font-size: 12px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #exo-vault-toast .vault-toast-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #exo-vault-toast .vt-btn {
+      border: none;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 5px 12px;
+      transition: background .12s;
+    }
+    #exo-vault-toast .vt-save {
+      background: rgba(167,139,250,.18);
+      color: #a78bfa;
+      border: 1px solid rgba(167,139,250,.35);
+    }
+    #exo-vault-toast .vt-save:hover { background: rgba(167,139,250,.28); }
+    #exo-vault-toast .vt-never {
+      background: rgba(255,255,255,.04);
+      color: #64748b;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    #exo-vault-toast .vt-never:hover { background: rgba(255,255,255,.09); color: #94a3b8; }
+    #exo-vault-toast .vt-close {
+      background: none;
+      border: none;
+      color: #475569;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      align-self: flex-start;
+      flex-shrink: 0;
+    }
+    #exo-vault-toast .vt-close:hover { color: #94a3b8; }
+  `;
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = TOAST_STYLE;
+  document.head.appendChild(styleEl);
+
+  // ── Build toast DOM ──────────────────────────────────────────────────────────
+  const toast = document.createElement('div');
+  toast.id = 'exo-vault-toast';
+  toast.innerHTML = `
+    <div class="vault-toast-icon">🔐</div>
+    <div class="vault-toast-body">
+      <div class="vault-toast-title">Uložit heslo?</div>
+      <div class="vault-toast-sub" id="exo-vault-toast-sub">…</div>
+      <div class="vault-toast-actions">
+        <button class="vt-btn vt-save" id="exo-vt-save">✓ Uložit</button>
+        <button class="vt-btn vt-never" id="exo-vt-never">✕ Ignorovat</button>
+      </div>
+    </div>
+    <button class="vt-close" id="exo-vt-close" title="Zavřít">✕</button>
+  `;
+  document.body.appendChild(toast);
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let _pending = null; // { origin, username, password }
+  let _hideTimer = null;
+
+  function showToastPrompt({ origin, username, password }) {
+    _pending = { origin, username, password };
+
+    // Update subtitle
+    const sub = document.getElementById('exo-vault-toast-sub');
+    if (sub) {
+      try {
+        sub.textContent = `${username} — ${new URL(origin).hostname}`;
+      } catch {
+        sub.textContent = `${username} — ${origin}`;
+      }
+    }
+
+    // Show
+    toast.classList.add('show');
+
+    // Auto-dismiss after 12 seconds
+    clearTimeout(_hideTimer);
+    _hideTimer = setTimeout(hideToast, 12000);
+  }
+
+  function hideToast() {
+    toast.classList.remove('show');
+    _pending = null;
+    clearTimeout(_hideTimer);
+  }
+
+  // ── Button handlers ──────────────────────────────────────────────────────────
+
+  document.getElementById('exo-vt-save')?.addEventListener('click', async () => {
+    if (!_pending) return;
+    const { origin, username, password } = _pending;
+    hideToast();
+
+    if (!window.browserAPI?.passwordSave) {
+      console.warn('[Exo-Vault] passwordSave not available in this context');
+      return;
+    }
+    const res = await window.browserAPI.passwordSave(origin, username, password);
+    if (res?.ok) {
+      // Brief confirmation flash on the button's original area
+      const el = document.createElement('div');
+      el.style.cssText = [
+        'position:fixed','bottom:20px','left:50%','transform:translateX(-50%)',
+        'z-index:99999','background:rgba(74,222,128,.15)','border:1px solid rgba(74,222,128,.3)',
+        'border-radius:8px','padding:8px 18px','color:#4ade80',
+        'font:600 13px/1.4 -apple-system,sans-serif','pointer-events:none',
+      ].join(';');
+      el.textContent = `✅ Heslo pro ${origin} uloženo.`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    } else {
+      console.error('[Exo-Vault] Save failed:', res?.error);
+    }
+  });
+
+  document.getElementById('exo-vt-never')?.addEventListener('click', hideToast);
+  document.getElementById('exo-vt-close')?.addEventListener('click', hideToast);
+
+  // ── Listen for vault-save-prompt from main process ────────────────────────────
+  if (window.browserAPI?.onVaultSavePrompt) {
+    window.browserAPI.onVaultSavePrompt((data) => {
+      console.log('🔔 [Renderer] Received save prompt, rendering toast...', data);
+      showToastPrompt(data);
+    });
+  } else {
+    console.warn('[Renderer] onVaultSavePrompt not available — preload may not be loaded correctly');
+  }
+
+  } // end _init
+
+  // Ensure DOM (body) is ready before building toast elements
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init();
+  }
+
 })();

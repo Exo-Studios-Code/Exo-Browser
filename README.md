@@ -1,15 +1,15 @@
 # Ex0 Browser
 <img width="1914" height="1029" alt="obrazek" src="https://github.com/user-attachments/assets/49325943-b0e5-4942-903b-b426c9d1c60e" />
 
-## 🚀 What's New in v1.1.0: Modular Plugin Engine
+## 🚀 What's New in v1.2.0: Native Password Vault & Pro Dark Reader
 
-Exo-Browser is no longer just a browser; it's a fully extensible platform. We've just shipped a brand-new custom Plugin Architecture!
+Exo-Browser takes a massive leap forward in daily usability, security, and aesthetics. We've replaced experimental features with rock-solid, production-grade systems!
 
-* 📦 **Drag & Drop Installation:** Installing a plugin is as easy as dragging a `.zip` file into the Plugin Manager. No manual folder digging required.
-* 🛡️ **Secure Execution:** Content scripts are cleanly injected and sandboxed, while allowing powerful API access via the `window.exo` namespace.
-* 🛠️ **Developer Friendly:** Want to build your own Spotify widget, Crypto tracker, or custom UI tweak? Check out the built-in Developer Guide inside the browser.
+* 🔐 **Native Password Vault & Autofill:** Built directly into the Chromium core using isolated IPC tunnels (`exo-tab-preload`). It intelligently detects login forms, displays a sleek overlay toast to save your credentials, and autofills them on your next visit—all encrypted locally with zero cloud exposure.
+* 🌙 **True Dark Mode (Powered by Dark Reader):** Say goodbye to weird color inversions and midnight white-screen flashbangs! We integrated a professional Dark Reader engine that renders websites in deep, clean blacks instantly without breaking page layouts.
+* 📦 **Modular Plugin Engine:** Continue building and installing custom extensions with drag & drop `.zip` installation and sandboxed API execution via the `window.exo` namespace.
 
-> **Note for Builders:** The first official open-source plugin, **YouTube Enhancer** (AdBlock + timestamp memory), is already available on our Discord!
+> **Note for Builders:** The open-source **YouTube Enhancer** plugin and the new **v1.2.0 installer** are available right now on our Discord and GitHub Releases!
 
 # Exo-Browser 🚀
 Developed by **Ex0 Studios**
@@ -42,37 +42,38 @@ npm run dev
 **Core Framework:** Electron (utilizes the modern `WebContentsView` API)
 
 ---
+
 ## 📂 Project Structure
 
-```text
+```
 Exo-Browser/
-├── main.js                  # Electron Main Process (backend, správa oken a procesů)
-├── preload.js               # Bezpečnostní můstek (Context Bridge) a IPC komunikace
-├── package.json             # NPM závislosti, metadata a build skripty
-├── .gitignore               # Zabezpečení proti pushování nepotřebných dat (.zip, .iss)
-└── src/                     # Hlavní složka s frontendem a logikou funkcí
-    ├── index.html           # Hlavní okno prohlížeče (UI kostra)
-    ├── renderer.js          # Logika frontendového rozhraní (správa tabů, navigace)
-    ├── styles.css           # Hlavní kaskádové styly prohlížeče
-    ├── exo-ai-agent.js      # Backend komunikace pro integraci modelu Gemini 2.5 Flash
-    ├── exo-ai-sidebar.html  # Uživatelské rozhraní pro AI postranní panel
-    ├── exo-downloads.js     # Logika pro stahování a blokování reklam (AdBlock)
-    ├── exo-dl-overlay.html  # UI vrstva pro historii stahování
-    ├── exo-newtab.html      # Design Nové karty (domovská obrazovka s grafikou)
-    ├── exo-pilot.js         # Backend logika pro asistenta Exo Pilot
-    ├── exo-pilot-preload.js # Izolovaný preload script pro Exo Pilota
-    ├── exo-pilot.html       # Uživatelské rozhraní pro Exo Pilota
-    ├── exo-plugin-engine.js # Backend jádro pro instalaci a správu .zip pluginů
-    ├── exo-plugins.html     # UI Plugin Manageru (tržnice a správa rozšíření)
-    ├── exo-search.html      # UI pro rychlé vyhledávání (Command Palette)
-    ├── exo-search.css       # Styly vyhrazené pro vyhledávací rozhraní
-    ├── exo-settings.html    # Uživatelské rozhraní nastavení prohlížeče
-    ├── background.png       # Hlavní grafika na pozadí aplikace
-    └── icon.ico / *.png     # Balík ikon, favicon a manifestů pro build
-	```
-
----
-
+├── main.js                  # Electron Main Process (backend, window & process management)
+├── preload.js               # Security Context Bridge & main IPC renderer communication
+├── exo-autofill.js          # DOM injection script for form detection & credential harvesting
+├── exo-password-manager.js  # Core encryption vault & password storage backend
+├── exo-tab-preload.js       # Isolated high-security IPC tunnel for WebContentsViews
+├── package.json             # NPM dependencies, metadata, and electron-builder scripts
+├── .gitignore               # Protection against pushing build binaries (.zip, .iss, /dist)
+└── src/                     # Core frontend UI and functional modules
+    ├── index.html           # Main browser window layout & UI skeleton
+    ├── renderer.js          # Frontend interface logic (tab management, navigation)
+    ├── styles.css           # Core stylesheet (Midnight Glass aesthetic)
+    ├── exo-ai-agent.js      # Backend IPC communication for Gemini 2.5 Flash AI integration
+    ├── exo-ai-sidebar.html  # UI layout for the interactive AI sidebar
+    ├── exo-dark-reader.js   # Native high-performance Dark Reader engine integration
+    ├── exo-downloads.js     # Download manager logic & AdBlock filter engine
+    ├── exo-dl-overlay.html  # UI layer for download history & floating toasts
+    ├── exo-newtab.html      # New Tab page design (home screen with custom graphics)
+    ├── exo-pilot.js         # Backend logic for the Exo Pilot AI assistant
+    ├── exo-pilot-preload.js # Isolated preload script for Exo Pilot
+    ├── exo-pilot.html       # User interface for the Exo Pilot assistant
+    ├── exo-plugin-engine.js # Backend core for .zip plugin installation & sandbox execution
+    ├── exo-plugins.html     # UI for the Plugin Manager (marketplace & management)
+    ├── exo-search.html      # UI for the quick Command Palette / search bar
+    ├── exo-search.css       # Dedicated stylesheet for the search interface
+    ├── exo-settings.html    # Browser configuration & settings UI
+    ├── background.png       # Core background graphic for the application
+    └── icon.ico / *.png     # Bundle of icons, favicons, and manifest assets for builds
 
 ```
 ## Architecture
